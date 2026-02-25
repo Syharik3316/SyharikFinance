@@ -1,0 +1,23 @@
+{
+  "name": "devhack-backend",
+  "version": "1.0.0",
+  "description": "Backend API for educational finance simulator",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "*",
+    "cors": "*",
+    "dotenv": "*",
+    "express": "*",
+    "jsonwebtoken": "*",
+    "multer": "*",
+    "mysql2": "*",
+    "nodemailer": "*",
+    "sequelize": "*"
+  }
+}
