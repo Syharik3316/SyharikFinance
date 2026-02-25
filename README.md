@@ -29,8 +29,100 @@
 ---
 
 ## Архитектура проекта:
+Схема модулей back/front
+```mermaid
+graph LR
+    subgraph Frontend
+        direction TB
+        F1[App.jsx\nглобальное состояние]
+        F2[pages/ компоненты]
+        F3[lib/api.js\nобёртка fetch + токен]
+        F4[styles/]
+        F1 --> F2
+        F2 --> F3
+        F1 --> F3
+    end
 
+    subgraph Backend
+        direction TB
+        B1[server.js\nинициализация]
+        B2[routes/]
+        B3[models/]
+        B4[middleware/auth.js]
+        B5[seed/seedInitialData.js]
+        B6[utils/mailer.js]
+        B7[uploads/avatars]
 
+        B1 --> B2
+        B1 --> B3
+        B2 --> B4
+        B2 --> B3
+        B1 --> B5
+        B1 --> B6
+        B1 --> B7
+    end
+
+    Frontend -- "HTTP /api" --> Backend
+    Backend --> MySQL[(MySQL)]
+```
+Схема работы в dev и prod режиме
+```mermaid
+graph TD
+    subgraph "Клиент (Браузер)"
+        A[HTML / JS / CSS]
+    end
+
+    subgraph "Сервер разработки (Vite)"
+        B[Vite Dev Server\nпорт 5173]
+    end
+
+    subgraph "Продуктивный сервер (Nginx)"
+        C[Nginx\nстатический контент + прокси]
+    end
+
+    subgraph "Backend-сервер (Node.js)"
+        D[Express приложение\nпорт 4000]
+    end
+
+    subgraph "База данных"
+        E[(MySQL)]
+    end
+
+    A -- "Запросы /api в dev" --> B
+    B -- "Прокси на /api" --> D
+    A -- "Запросы в prod" --> C
+    C -- "Прокси ^~ /api/ и /api/uploads/" --> D
+    D -- "Чтение/запись данных" --> E
+```
+
+Схема логина пользователя
+```mermaid
+sequenceDiagram
+    participant User
+    participant LoginPage as Login (pages/Login.jsx)
+    participant Api as lib/api.js
+    participant Backend as Express (server)
+    participant DB as MySQL
+
+    User->>LoginPage: вводит логин/пароль, нажимает «Войти»
+    LoginPage->>Api: apiFetch('/api/auth/login', {method:'POST', body})
+    Api->>Backend: POST /api/auth/login
+    Backend->>DB: SELECT user WHERE login/email
+    DB-->>Backend: user data
+    Backend->>Backend: проверка пароля (bcrypt), генерация JWT
+    Backend-->>Api: 200 OK, {token, user}
+    Api-->>LoginPage: ответ с токеном и user
+    LoginPage->>LoginPage: setToken(token) в localStorage
+    LoginPage->>Api: apiFetch('/api/me')
+    Api->>Backend: GET /api/me (Authorization: Bearer token)
+    Backend->>Backend: authMiddleware проверяет JWT
+    Backend->>DB: SELECT user + связи
+    DB-->>Backend: полные данные пользователя
+    Backend-->>Api: 200 OK, user
+    Api-->>LoginPage: user
+    LoginPage->>App: onLoggedIn(user)
+    App->>App: setUser(user), setView(PROFILE)
+```
 ## Стек технологий
 
 | Часть       | Технологии |
@@ -220,4 +312,5 @@ devhack/
 │   └── package.json
 ├── nginx.conf          # Пример конфига Nginx для деплоя
 └── README.md
+
 ```
