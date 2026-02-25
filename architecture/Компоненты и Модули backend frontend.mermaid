@@ -1,0 +1,33 @@
+graph LR
+    subgraph Frontend
+        direction TB
+        F1[App.jsx\nглобальное состояние]
+        F2[pages/ компоненты]
+        F3[lib/api.js\nобёртка fetch + токен]
+        F4[styles/]
+        F1 --> F2
+        F2 --> F3
+        F1 --> F3
+    end
+
+    subgraph Backend
+        direction TB
+        B1[server.js\nинициализация]
+        B2[routes/]
+        B3[models/]
+        B4[middleware/auth.js]
+        B5[seed/seedInitialData.js]
+        B6[utils/mailer.js]
+        B7[uploads/avatars]
+
+        B1 --> B2
+        B1 --> B3
+        B2 --> B4
+        B2 --> B3
+        B1 --> B5
+        B1 --> B6
+        B1 --> B7
+    end
+
+    Frontend -- "HTTP /api" --> Backend
+    Backend --> MySQL[(MySQL)]

@@ -1,0 +1,25 @@
+sequenceDiagram
+    participant User
+    participant LoginPage as Login (pages/Login.jsx)
+    participant Api as lib/api.js
+    participant Backend as Express (server)
+    participant DB as MySQL
+
+    User->>LoginPage: вводит логин/пароль, нажимает «Войти»
+    LoginPage->>Api: apiFetch('/api/auth/login', {method:'POST', body})
+    Api->>Backend: POST /api/auth/login
+    Backend->>DB: SELECT user WHERE login/email
+    DB-->>Backend: user data
+    Backend->>Backend: проверка пароля (bcrypt), генерация JWT
+    Backend-->>Api: 200 OK, {token, user}
+    Api-->>LoginPage: ответ с токеном и user
+    LoginPage->>LoginPage: setToken(token) в localStorage
+    LoginPage->>Api: apiFetch('/api/me')
+    Api->>Backend: GET /api/me (Authorization: Bearer token)
+    Backend->>Backend: authMiddleware проверяет JWT
+    Backend->>DB: SELECT user + связи
+    DB-->>Backend: полные данные пользователя
+    Backend-->>Api: 200 OK, user
+    Api-->>LoginPage: user
+    LoginPage->>App: onLoggedIn(user)
+    App->>App: setUser(user), setView(PROFILE)

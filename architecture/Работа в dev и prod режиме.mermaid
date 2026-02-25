@@ -1,0 +1,26 @@
+graph TD
+    subgraph "Клиент (Браузер)"
+        A[HTML / JS / CSS]
+    end
+
+    subgraph "Сервер разработки (Vite)"
+        B[Vite Dev Server\nпорт 5173]
+    end
+
+    subgraph "Продуктивный сервер (Nginx)"
+        C[Nginx\nстатический контент + прокси]
+    end
+
+    subgraph "Backend-сервер (Node.js)"
+        D[Express приложение\nпорт 4000]
+    end
+
+    subgraph "База данных"
+        E[(MySQL)]
+    end
+
+    A -- "Запросы /api в dev" --> B
+    B -- "Прокси на /api" --> D
+    A -- "Запросы в prod" --> C
+    C -- "Прокси ^~ /api/ и /api/uploads/" --> D
+    D -- "Чтение/запись данных" --> E
