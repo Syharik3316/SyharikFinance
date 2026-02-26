@@ -34,7 +34,7 @@ router.post('/unlock', authMiddleware, async (req, res) => {
       return res.status(400).json({ message: 'Not enough gems', required: UNLOCK_COST_GEMS });
     }
 
-    user.gems = Math.max(0, gems - UNLOCK_COST_GEMS);
+    user.gems = Math.max(0, Math.round(gems - UNLOCK_COST_GEMS));
     user.unlockedScenarios = [...unlocked, scenarioCode];
     await user.save();
 

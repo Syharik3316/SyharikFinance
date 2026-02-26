@@ -1,8 +1,92 @@
 const express = require('express');
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
 const { authMiddleware } = require('../middleware/auth');
-const { User, IslandGameState } = require('../models');
+const { User, IslandGameState, Achievement } = require('../models');
 
 const router = express.Router();
+
+const ZONE_IDS = ['camp', 'food', 'wood', 'stone', 'market'];
+const ZONES_CONFIG_PATH = path.join(__dirname, '..', 'data', 'island-zones.json');
+const ZONES_UPLOAD_DIR = path.join(__dirname, '..', '..', 'uploads', 'island-zones');
+
+function getDefaultZonesConfig() {
+  return ZONE_IDS.reduce((acc, id) => {
+    acc[id] = { imageUrl: '', instruction: '' };
+    return acc;
+  }, {});
+}
+
+function readZonesConfig() {
+  try {
+    const raw = fs.readFileSync(ZONES_CONFIG_PATH, 'utf8');
+    const data = JSON.parse(raw);
+    const zones = getDefaultZonesConfig();
+    for (const id of ZONE_IDS) {
+      if (data[id]) {
+        if (typeof data[id].imageUrl === 'string') zones[id].imageUrl = data[id].imageUrl;
+        if (typeof data[id].instruction === 'string') zones[id].instruction = data[id].instruction;
+      }
+    }
+    return zones;
+  } catch {
+    return getDefaultZonesConfig();
+  }
+}
+
+function writeZonesConfig(zones) {
+  try {
+    const dir = path.dirname(ZONES_CONFIG_PATH);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(ZONES_CONFIG_PATH, JSON.stringify(zones, null, 2), 'utf8');
+  } catch (err) {
+    console.error('writeZonesConfig:', err);
+    throw err;
+  }
+}
+
+if (!fs.existsSync(ZONES_UPLOAD_DIR)) {
+  fs.mkdirSync(ZONES_UPLOAD_DIR, { recursive: true });
+}
+
+const zonesUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, ZONES_UPLOAD_DIR),
+    filename: (req, file, cb) => {
+      const zoneId = (req.body.zoneId || 'zone').replace(/[^a-z_]/gi, '') || 'zone';
+      const ext = ['.png', '.jpg', '.jpeg', '.webp', '.gif'].includes(path.extname(file.originalname || '').toLowerCase())
+        ? path.extname(file.originalname).toLowerCase()
+        : '.jpg';
+      cb(null, `${zoneId}-${Date.now()}${ext}`);
+    },
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
+
+async function awardAchievementIfNeeded(user, code) {
+  const achievement = await Achievement.findOne({ where: { code } });
+  if (!achievement) return;
+  const existing = await user.getAchievements({
+    where: { id: achievement.id },
+    joinTableAttributes: [],
+  });
+  if (existing && existing.length > 0) return;
+  await user.addAchievement(achievement);
+}
+
+function isIsland100Percent(state) {
+  if (!state || !state.buildings || !state.resources || !state.warehouse) return false;
+  const buildings = state.buildings;
+  if (buildings.hut !== 2 || buildings.warehouse !== 2 || buildings.workshop !== 2 || buildings.watchtower !== 2) return false;
+  const res = state.resources;
+  const wh = state.warehouse;
+  const keys = ['food', 'wood', 'stone', 'coins'];
+  for (const k of keys) {
+    if ((res[k] || 0) < 30 || (wh[k] || 0) < 100) return false;
+  }
+  return true;
+}
 
 function getInitialState(difficulty) {
   return {
@@ -26,6 +110,17 @@ function getInitialState(difficulty) {
     sadPenalty: 0,
   };
 }
+
+// DELETE /api/island-game — удалить сохранение (после проигрыша)
+router.delete('/', authMiddleware, async (req, res) => {
+  try {
+    await IslandGameState.destroy({ where: { userId: req.user.id } });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to delete island game' });
+  }
+});
 
 // GET /api/island-game — загрузить текущее состояние (или null если нет)
 router.get('/', authMiddleware, async (req, res) => {
@@ -92,15 +187,92 @@ router.post('/', authMiddleware, async (req, res) => {
       { returning: true }
     );
     const record = Array.isArray(row) ? row[0] : row;
+
+    const meta = {};
+    if (gameOver && (dayCount || record.dayCount)) {
+      const days = dayCount ?? record.dayCount;
+      const user = await User.findByPk(req.user.id);
+      if (user) {
+        const prevBest = user.islandBestDays || 0;
+        const best = Math.max(days, prevBest);
+        if (best > prevBest) {
+          user.islandBestDays = best;
+          await user.save();
+          meta.bestDaysUpdated = true;
+          meta.newBestDays = best;
+        }
+        const beforeCodes = (await user.getAchievements({ attributes: ['code'] })).map((a) => a.code);
+        await awardAchievementIfNeeded(user, 'island_survivor');
+        if (gameOver === 'victory' && isIsland100Percent(state || record.state)) {
+          await awardAchievementIfNeeded(user, 'island_100');
+        }
+        await user.reload();
+        const afterCodes = (await user.getAchievements({ attributes: ['code'] })).map((a) => a.code);
+        const newCodes = afterCodes.filter((c) => !beforeCodes.includes(c));
+        if (newCodes.length) meta.achievementsUnlocked = newCodes;
+      }
+    }
+
     res.json({
       difficulty: record.difficulty,
       dayCount: record.dayCount,
       gameOver: record.gameOver,
       state: record.state,
+      ...meta,
     });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Failed to save island game' });
+  }
+});
+
+// GET /api/island-game/zones — конфиг картинок и инструкций по зонам (публичный)
+router.get('/zones', (req, res) => {
+  try {
+    const zones = readZonesConfig();
+    res.json({ zones });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to load zones config' });
+  }
+});
+
+// POST /api/island-game/zones/upload — загрузить картинку и/или инструкцию для зоны (auth)
+router.post('/zones/upload', authMiddleware, zonesUpload.single('image'), (req, res) => {
+  try {
+    const zoneId = (req.body.zoneId || '').trim();
+    if (!ZONE_IDS.includes(zoneId)) {
+      return res.status(400).json({ message: 'Invalid zoneId. Use: camp, food, wood, stone, market' });
+    }
+    const zones = readZonesConfig();
+    if (req.file) {
+      zones[zoneId].imageUrl = `/api/uploads/island-zones/${req.file.filename}`;
+    }
+    if (typeof req.body.instruction === 'string') {
+      zones[zoneId].instruction = req.body.instruction.trim();
+    }
+    writeZonesConfig(zones);
+    res.json({ zones });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to upload zone' });
+  }
+});
+
+// PATCH /api/island-game/zones — обновить только инструкцию для зоны (auth)
+router.patch('/zones', authMiddleware, (req, res) => {
+  try {
+    const { zoneId, instruction } = req.body || {};
+    if (!ZONE_IDS.includes(zoneId)) {
+      return res.status(400).json({ message: 'Invalid zoneId. Use: camp, food, wood, stone, market' });
+    }
+    const zones = readZonesConfig();
+    zones[zoneId].instruction = typeof instruction === 'string' ? instruction.trim() : zones[zoneId].instruction;
+    writeZonesConfig(zones);
+    res.json({ zones });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to update zone' });
   }
 });
 

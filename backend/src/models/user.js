@@ -75,6 +75,12 @@ const User = sequelize.define(
       allowNull: false,
       defaultValue: 'katya',
     },
+    islandBestDays: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+      comment: 'Лучший результат в мини-игре «Остров» (макс. дней)',
+    },
   },
   {
     tableName: 'users',
@@ -83,7 +89,10 @@ const User = sequelize.define(
     updatedAt: 'updatedAt',
     hooks: {
       beforeSave: (user) => {
-        if (user.gems != null && user.gems < 0) user.gems = 0;
+        if (user.gems != null) {
+          user.gems = Math.round(user.gems);
+          if (user.gems < 0) user.gems = 0;
+        }
       },
     },
   }

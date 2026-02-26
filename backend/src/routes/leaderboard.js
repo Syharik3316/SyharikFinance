@@ -29,7 +29,7 @@ router.get('/', async (req, res) => {
       name: u.name,
       login: u.login,
       avatarUrl: u.avatarUrl,
-      gems: u.gems || 0,
+      gems: Math.round(u.gems || 0),
       experience: u.experience || 0,
       level: levelFromExperience(u.experience),
     }));

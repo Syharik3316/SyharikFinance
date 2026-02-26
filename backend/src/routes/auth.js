@@ -77,7 +77,7 @@ router.post('/register', async (req, res) => {
       isVerified: false,
       verificationCodeHash,
       verificationCodeExpiresAt,
-      characterKey: 'user',
+      characterKey: 'katya',
     });
 
     await sendVerificationCode(user, code);
@@ -139,7 +139,12 @@ router.post('/verify', async (req, res) => {
 
 router.post('/login', async (req, res) => {
   try {
-    requireJwtSecret();
+    if (!process.env.JWT_SECRET) {
+      console.error('JWT_SECRET is not set in environment');
+      return res.status(500).json({
+        message: 'Сервер не настроен: отсутствует JWT_SECRET. Добавьте переменную окружения на сервере.',
+      });
+    }
 
     const { loginOrEmail, password } = req.body;
     const identifier = String(loginOrEmail || '').trim();
@@ -182,8 +187,11 @@ router.post('/login', async (req, res) => {
       },
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Failed to login' });
+    console.error('Login error:', err);
+    res.status(500).json({
+      message: err.message || 'Failed to login',
+      ...(process.env.NODE_ENV === 'development' && { detail: err.stack }),
+    });
   }
 });
 

@@ -18,6 +18,20 @@ process.on('unhandledRejection', (reason, promise) => {
 const { sequelize } = require('./models');
 const { seedInitialData } = require('./seed/seedInitialData');
 
+/** Добавить колонку islandBestDays в users, если её ещё нет (миграция при старте). */
+async function ensureIslandBestDaysColumn() {
+  const qi = sequelize.getQueryInterface();
+  const tableDesc = await qi.describeTable('users');
+  if (tableDesc.islandBestDays != null) return;
+  await qi.addColumn('users', 'islandBestDays', {
+    type: sequelize.Sequelize.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+    comment: 'Лучший результат в мини-игре «Остров» (макс. дней)',
+  });
+  console.log('Migration: added column users.islandBestDays');
+}
+
 const usersRouter = require('./routes/users');
 const authRouter = require('./routes/auth');
 const meRouter = require('./routes/me');
@@ -27,6 +41,7 @@ const achievementsRouter = require('./routes/achievements');
 const runsRouter = require('./routes/runs');
 const leaderboardRouter = require('./routes/leaderboard');
 const islandGameRouter = require('./routes/islandGame');
+const chatRouter = require('./routes/chat');
 
 const app = express();
 
@@ -52,6 +67,7 @@ app.use('/api/achievements', achievementsRouter);
 app.use('/api/runs', runsRouter);
 app.use('/api/leaderboard', leaderboardRouter);
 app.use('/api/island-game', islandGameRouter);
+app.use('/api/chat', chatRouter);
 
 const PORT = process.env.PORT || 4000;
 
@@ -60,6 +76,7 @@ async function start() {
     await sequelize.authenticate();
     // Без alter: true — иначе на таблице users с большим числом индексов MySQL даёт ER_TOO_MANY_KEYS (max 64).
     await sequelize.sync();
+    await ensureIslandBestDaysColumn();
     await seedInitialData();
 
     app.listen(PORT, () => {

@@ -125,24 +125,25 @@ router.post('/save', authMiddleware, async (req, res) => {
       },
     });
 
+    const round = (n) => (Number.isFinite(n) ? Math.round(n) : n);
     if (!run) {
       const created = await ScenarioRun.create({
         userId: req.user.id,
         scenarioId: scenario.id,
         status: 'active',
         dayIndex: Number.isFinite(dayIndex) ? dayIndex : 0,
-        budget: Number.isFinite(budget) ? budget : scenario.baseBudget,
-        earned: Number.isFinite(earned) ? earned : 0,
-        spent: Number.isFinite(spent) ? spent : 0,
+        budget: round(Number.isFinite(budget) ? budget : scenario.baseBudget),
+        earned: round(Number.isFinite(earned) ? earned : 0),
+        spent: round(Number.isFinite(spent) ? spent : 0),
         state: state ?? null,
       });
       return res.status(201).json(created);
     }
 
     run.dayIndex = Number.isFinite(dayIndex) ? dayIndex : run.dayIndex;
-    run.budget = Number.isFinite(budget) ? budget : run.budget;
-    run.earned = Number.isFinite(earned) ? earned : run.earned;
-    run.spent = Number.isFinite(spent) ? spent : run.spent;
+    run.budget = round(Number.isFinite(budget) ? budget : run.budget);
+    run.earned = round(Number.isFinite(earned) ? earned : run.earned);
+    run.spent = round(Number.isFinite(spent) ? spent : run.spent);
     run.state = state ?? run.state;
     await run.save();
 
@@ -182,12 +183,13 @@ router.post('/finish', authMiddleware, async (req, res) => {
         status: 'active',
       },
     });
+    const round = (n) => (Number.isFinite(n) ? Math.round(n) : n);
     if (run) {
       run.status = 'finished';
       run.dayIndex = scenario.maxDays ? scenario.maxDays : run.dayIndex;
-      run.budget = Number.isFinite(finalBudget) ? finalBudget : run.budget;
-      run.earned = Number.isFinite(earned) ? earned : run.earned;
-      run.spent = Number.isFinite(spent) ? spent : run.spent;
+      run.budget = round(Number.isFinite(finalBudget) ? finalBudget : run.budget);
+      run.earned = round(Number.isFinite(earned) ? earned : run.earned);
+      run.spent = round(Number.isFinite(spent) ? spent : run.spent);
       await run.save();
     }
 
@@ -196,10 +198,6 @@ router.post('/finish', authMiddleware, async (req, res) => {
       if (Number(spent) === 0 && Number(finalBudget) >= Number(scenario.goal || 5000)) {
         await awardAchievementIfNeeded(user, 'bike_no_spend');
       }
-    }
-
-    if (scenario.code === 'friend_birthday' && status === 'passed') {
-      await awardAchievementIfNeeded(user, 'smart_friend');
     }
 
     if (scenario.code === 'money_quiz' && status === 'passed') {
@@ -220,7 +218,7 @@ router.post('/finish', authMiddleware, async (req, res) => {
       const quizPass = scenario.code === 'money_quiz' && Number(finalBudget) >= 80;
       const nonQuizPass = scenario.code !== 'money_quiz';
       if (quizPass || nonQuizPass) {
-        user.gems = (user.gems || 0) + 25;
+        user.gems = Math.round((user.gems || 0) + 25);
       }
     }
 

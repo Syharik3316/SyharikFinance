@@ -60,6 +60,7 @@ router.get('/', authMiddleware, async (req, res) => {
       'gems',
       'experience',
       'unlockedScenarios',
+      'islandBestDays',
       'createdAt',
     ],
     include: [
@@ -176,6 +177,25 @@ router.post('/avatar', authMiddleware, upload.single('avatar'), async (req, res)
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Failed to upload avatar' });
+  }
+});
+
+// POST /api/me/gems — начислить алмазы (например, за дни в мини-игре «Остров»)
+router.post('/gems', authMiddleware, async (req, res) => {
+  try {
+    const amount = Math.max(0, Math.floor(Number(req.body?.amount) || 0));
+    if (amount <= 0) return res.status(400).json({ message: 'amount must be a positive number' });
+
+    const user = await User.findByPk(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    user.gems = Math.max(0, Math.round((user.gems || 0) + amount));
+    await user.save();
+
+    res.json({ gems: user.gems });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to add gems' });
   }
 });
 

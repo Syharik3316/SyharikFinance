@@ -27,7 +27,7 @@ router.post('/unlock', authMiddleware, async (req, res) => {
       return res.status(400).json({ message: 'Not enough gems' });
     }
 
-    user.gems = (user.gems || 0) - CHAR_COST;
+    user.gems = Math.max(0, Math.round((user.gems || 0) - CHAR_COST));
     if (characterKey === 'katya') user.unlockedKatya = true;
     if (characterKey === 'ilya') user.unlockedIlya = true;
     await user.save();

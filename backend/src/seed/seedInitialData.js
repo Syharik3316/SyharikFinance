@@ -116,23 +116,7 @@ async function seedInitialData() {
     }
   }
 
-  // Scenario 2: Friend birthday (budget)
-  let birthdayScenario = await Scenario.findOne({ where: { code: 'friend_birthday' } });
-  if (!birthdayScenario) {
-    birthdayScenario = await Scenario.create({
-      code: 'friend_birthday',
-      title: 'День рождения друга',
-      description:
-        'Распредели 1000 монет между подарком, игрой и походом в пиццерию так, чтобы учесть бюджет и чувства друга.',
-      type: 'budget',
-      baseBudget: 1000,
-      goal: null,
-      maxDays: null,
-      difficulty: 'beginner',
-    });
-  }
-
-  // Scenario 3: Money quiz (stub)
+  // Scenario 2: Money quiz (stub)
   let quizScenario = await Scenario.findOne({ where: { code: 'money_quiz' } });
   if (!quizScenario) {
     quizScenario = await Scenario.create({
@@ -203,6 +187,18 @@ async function seedInitialData() {
       title: 'Инвестиционный чемпион',
       description: 'Лучший итоговый баланс в сценарии «Инвестиционная гонка».',
       icon: '📈',
+    },
+    {
+      code: 'island_survivor',
+      title: 'Островитянин',
+      description: 'Рекорд по числу прожитых дней в мини-игре «Остров сокровищ».',
+      icon: '🏝️',
+    },
+    {
+      code: 'island_100',
+      title: 'Остров на 100%',
+      description: 'Полностью прошёл мини-игру «Остров сокровищ»: все постройки на карте, склад и руки заполнены по максимуму.',
+      icon: '🌟',
     },
   ];
 
