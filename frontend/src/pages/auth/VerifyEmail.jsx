@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 
-export default function VerifyEmail({ apiBase, apiFetch, defaultEmail, onBack, onVerified }) {
+const DEV_NOTICE = 'Сайт в режиме разработки (DEV). Код на почту не отправляется.';
+
+export default function VerifyEmail({ apiBase, apiFetch, defaultEmail, initialDevCode = '', onBack, onVerified }) {
   const email = defaultEmail || '';
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
-  const [devCode, setDevCode] = useState('');
+  const [devCode, setDevCode] = useState(initialDevCode || '');
   const [resendTarget, setResendTarget] = useState('');
+  const [isDevMode, setIsDevMode] = useState(!!initialDevCode);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -57,9 +60,15 @@ export default function VerifyEmail({ apiBase, apiFetch, defaultEmail, onBack, o
         setError(data.message || 'Не удалось отправить код');
         return;
       }
-      if (data.devCode) setDevCode(data.devCode);
-      setResendTarget(email);
-      setInfo(`Код отправлен на ${email}. Проверь почту.`);
+      if (data.devCode) {
+        setDevCode(data.devCode);
+        setIsDevMode(true);
+        setInfo(DEV_NOTICE);
+        setResendTarget('');
+      } else {
+        setResendTarget(email);
+        setInfo(`Код отправлен на ${email}. Проверь почту.`);
+      }
     } catch {
       setError('Не удалось отправить код. Проверь backend.');
     } finally {
@@ -93,21 +102,26 @@ export default function VerifyEmail({ apiBase, apiFetch, defaultEmail, onBack, o
                   {loading ? 'Проверяем...' : 'Подтвердить'}
                 </button>
                 <button className="btn btn--outline" type="button" disabled={loading || !email} onClick={resend}>
-                  Отправить код ещё раз
+                  {isDevMode ? 'Получить код' : 'Отправить код ещё раз'}
                 </button>
                 <button className="btn btn--outline" type="button" onClick={onBack}>
                   Назад
                 </button>
               </div>
             </form>
-            {resendTarget && (
+            {resendTarget && !isDevMode && (
               <p className="text-muted" style={{ marginTop: 12, fontSize: '0.9rem' }}>
                 Код отправлен на <strong>{resendTarget}</strong>
               </p>
             )}
+            {isDevMode && (
+              <p className="text-muted" style={{ marginTop: 12, fontSize: '0.9rem' }}>
+                {DEV_NOTICE}
+              </p>
+            )}
             {devCode && (
-              <p className="text-muted" style={{ marginTop: 16, fontSize: '0.85rem' }}>
-                Dev-режим: код подтверждения <strong>{devCode}</strong>
+              <p className="text-muted" style={{ marginTop: 8, fontSize: '0.85rem' }}>
+                Код подтверждения: <strong>{devCode}</strong>
               </p>
             )}
             {info && (

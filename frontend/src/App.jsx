@@ -52,6 +52,7 @@ export default function App() {
   const [budgetBump, setBudgetBump] = useState(false);
   const [booting, setBooting] = useState(true);
   const [verifyEmail, setVerifyEmail] = useState('');
+  const [verifyInitialDevCode, setVerifyInitialDevCode] = useState('');
   const [difficulty, setDifficulty] = useState(() => {
     try {
       const v = localStorage.getItem(DIFFICULTY_STORAGE_KEY);
@@ -246,8 +247,9 @@ export default function App() {
             apiBase={API_BASE}
             apiFetch={authedApiFetch}
             onBack={() => setView(Views.LOGIN)}
-            onRegistered={(email) => {
+            onRegistered={(email, devCode) => {
               setVerifyEmail(email);
+              setVerifyInitialDevCode(devCode || '');
               setView(Views.VERIFY);
             }}
           />
@@ -258,7 +260,8 @@ export default function App() {
             apiBase={API_BASE}
             apiFetch={authedApiFetch}
             defaultEmail={verifyEmail}
-            onBack={() => setView(user ? Views.PROFILE : Views.LOGIN)}
+            initialDevCode={verifyInitialDevCode}
+            onBack={() => { setView(user ? Views.PROFILE : Views.LOGIN); setVerifyInitialDevCode(''); }}
             onVerified={async () => {
               if (user) {
                 const res = await authedApiFetch(`${API_BASE}/me`);
@@ -292,6 +295,7 @@ export default function App() {
             onGoGames={() => setView(Views.ISLAND_GAME)}
             onGoVerifyEmail={() => {
               setVerifyEmail(user.email || '');
+              setVerifyInitialDevCode('');
               setView(Views.VERIFY);
             }}
             onLogout={() => {

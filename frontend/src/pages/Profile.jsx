@@ -44,6 +44,12 @@ export default function Profile({
   const [uploading, setUploading] = useState(false);
   const [avatarErr, setAvatarErr] = useState('');
 
+  const [telegramLinkCode, setTelegramLinkCode] = useState('');
+  const [telegramLinkLoading, setTelegramLinkLoading] = useState(false);
+  const [telegramUnlinkLoading, setTelegramUnlinkLoading] = useState(false);
+  const telegramLinked = Boolean(user.telegramLinked);
+  const telegramUsername = user.telegramUsername || null;
+
   const achievements = useMemo(() => user.Achievements || [], [user]);
   const gems = Math.round(user.gems || 0);
   const { musicEnabled, setMusicEnabled } = useMusic();
@@ -103,6 +109,42 @@ export default function Profile({
       setPassErr('Ошибка смены пароля. Проверь backend.');
     } finally {
       setSavingPassword(false);
+    }
+  };
+
+  const requestTelegramLink = async () => {
+    setTelegramLinkCode('');
+    try {
+      setTelegramLinkLoading(true);
+      const res = await apiFetch(`${apiBase}/me/telegram-link`, { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.linkCode) {
+        setTelegramLinkCode(data.linkCode);
+      } else {
+        setProfileErr(data.message || 'Не удалось получить код');
+      }
+    } catch {
+      setProfileErr('Ошибка. Проверь backend.');
+    } finally {
+      setTelegramLinkLoading(false);
+    }
+  };
+
+  const unlinkTelegram = async () => {
+    if (!confirm('Отвязать Telegram от аккаунта?')) return;
+    try {
+      setTelegramUnlinkLoading(true);
+      const res = await apiFetch(`${apiBase}/me/telegram-unlink`, { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        await onUserUpdated();
+      } else {
+        setProfileErr(data.message || 'Не удалось отвязать');
+      }
+    } catch {
+      setProfileErr('Ошибка. Проверь backend.');
+    } finally {
+      setTelegramUnlinkLoading(false);
     }
   };
 
@@ -349,6 +391,62 @@ export default function Profile({
                   </label>
                 </div>
                 {avatarErr && <p className="text-danger" style={{ marginTop: 12 }}>{avatarErr}</p>}
+              </section>
+
+              <section className="profile-section">
+                <h2 className="profile-section__title">Telegram</h2>
+                <p className="profile-section__subtitle">
+                  Привяжи аккаунт к боту{' '}
+                  <a href="https://t.me/SyharikFinanceBot" target="_blank" rel="noopener noreferrer">@SyharikFinanceBot</a>
+                  {' '}— прогресс по сценариям будет синхронизироваться: можно начать на сайте и продолжить в боте или наоборот.
+                </p>
+                {telegramLinked ? (
+                  <div className="profile-form">
+                    <p className="text-success" style={{ marginBottom: 12 }}>
+                      К этому профилю привязан Telegram{telegramUsername ? `: @${telegramUsername}` : ''}.
+                    </p>
+                    <button
+                      type="button"
+                      className="btn btn--outline"
+                      onClick={unlinkTelegram}
+                      disabled={telegramUnlinkLoading}
+                    >
+                      {telegramUnlinkLoading ? 'Отвязываем...' : 'Отвязать'}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="profile-form">
+                    {!telegramLinkCode ? (
+                      <button
+                        type="button"
+                        className="btn btn--primary"
+                        onClick={requestTelegramLink}
+                        disabled={telegramLinkLoading}
+                      >
+                        {telegramLinkLoading ? 'Генерируем код...' : 'Привязать Telegram'}
+                      </button>
+                    ) : (
+                      <div style={{ maxWidth: 360 }}>
+                        <p style={{ marginBottom: 8 }}>
+                          Отправь боту{' '}
+                          <a href="https://t.me/SyharikFinanceBot" target="_blank" rel="noopener noreferrer">@SyharikFinanceBot</a>
+                          {' '}команду (код действует 10 минут):
+                        </p>
+                        <p style={{ fontSize: 24, fontWeight: 700, letterSpacing: 4, marginBottom: 12 }}>{telegramLinkCode}</p>
+                        <p className="text-muted" style={{ marginBottom: 12 }}>
+                          В Telegram: <strong>/link {telegramLinkCode}</strong>
+                        </p>
+                        <button
+                          type="button"
+                          className="btn btn--outline"
+                          onClick={() => setTelegramLinkCode('')}
+                        >
+                          Скрыть код
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </section>
             </>
           )}

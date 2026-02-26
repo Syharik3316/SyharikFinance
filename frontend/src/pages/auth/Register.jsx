@@ -25,7 +25,7 @@ export default function Register({ apiBase, apiFetch, onBack, onRegistered }) {
         return;
       }
       if (data.devCode) setDevCode(data.devCode);
-      onRegistered(data.email || email);
+      onRegistered(data.email || email, data.devCode);
     } catch {
       setError('Не удалось зарегистрироваться. Проверь backend.');
     } finally {
@@ -40,7 +40,9 @@ export default function Register({ apiBase, apiFetch, onBack, onRegistered }) {
           <section className="login-card">
             <h1 className="login-card__title">Регистрация</h1>
             <p className="login-card__subtitle">
-              После регистрации мы отправим код подтверждения на почту.
+              {devCode
+                ? 'Сайт в режиме разработки (DEV). Код на почту не отправляется — используй код ниже.'
+                : 'После регистрации мы отправим код подтверждения на почту.'}
             </p>
             <form className="login-form" onSubmit={submit}>
               <label className="login-form__label">
