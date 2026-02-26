@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 
-const BOT_NAME = 'ИИ-помощник';
+const BOT_NAME = 'SyharikAI';
 const MAX_HISTORY_MESSAGES = 10;
 
 export default function AIChat({ open, onClose, apiBase = '/api', className = '' }) {
@@ -89,12 +89,12 @@ export default function AIChat({ open, onClose, apiBase = '/api', className = ''
     <div
       className={`ai-chat-panel ${className}`}
       id="support-chat"
-      aria-label="Чат с ИИ-помощником"
+      aria-label="Чат с SyharikAI"
       onWheel={(e) => e.stopPropagation()}
     >
       <div className="ai-chat-panel__header">
         <span className="ai-chat-panel__title">
-          <span className="ai-chat-panel__title-icon">🤖</span>
+          <img src="/favicon.ico" alt="" className="ai-chat-panel__title-icon" />
           {BOT_NAME}
         </span>
         <button
@@ -112,7 +112,7 @@ export default function AIChat({ open, onClose, apiBase = '/api', className = ''
             key={m.id}
             className={`ai-chat-msg ai-chat-msg--${m.role}`}
           >
-            {m.role === 'bot' && <span className="ai-chat-msg__avatar">🤖</span>}
+            {m.role === 'bot' && <img src="/favicon.ico" alt="" className="ai-chat-msg__avatar ai-chat-msg__avatar-img" />}
             <div className="ai-chat-msg__bubble">
               {m.role === 'bot' && <span className="ai-chat-msg__name">{BOT_NAME}</span>}
               <p className="ai-chat-msg__text">{m.text}</p>
@@ -121,7 +121,7 @@ export default function AIChat({ open, onClose, apiBase = '/api', className = ''
         ))}
         {loading && (
           <div className="ai-chat-msg ai-chat-msg--bot">
-            <span className="ai-chat-msg__avatar">🤖</span>
+            <img src="/favicon.ico" alt="" className="ai-chat-msg__avatar ai-chat-msg__avatar-img" />
             <div className="ai-chat-msg__bubble ai-chat-msg__bubble--loading">
               <span className="ai-chat-msg__name">{BOT_NAME}</span>
               <p className="ai-chat-msg__text">Думаю...</p>

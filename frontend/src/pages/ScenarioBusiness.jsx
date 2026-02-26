@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ScenarioStage from '../components/ScenarioStage.jsx';
 
+// Фоны по дням: положи файлы day1.jpg … day30.jpg в frontend/public/backgrounds/lemonade/
+const LEMONADE_BG_BASE = '/backgrounds/lemonade';
+
 // Сценарий «Мой первый бизнес»: 30 дней, цель 5000 руб. на смартфон.
 // Стартовый капитал 1500. Ежедневный доход от популярности + сюжетные выборы. Реально дойти до 5к.
 const DAYS_BASE = [
@@ -609,6 +612,8 @@ export default function ScenarioBusiness({
   if (!introSeen) {
     return (
       <ScenarioStage
+        backgroundUrl={`${LEMONADE_BG_BASE}/day1.jpg`}
+        backgroundClassName=""
         leftHud={
           <>
             <div className="hud-pill"><span className="hud-label">День</span><span className="hud-value">0/{maxDays}</span></div>
@@ -652,8 +657,11 @@ export default function ScenarioBusiness({
     </>
   );
 
+  const bgUrl = currentEvent.backgroundUrl ?? `${LEMONADE_BG_BASE}/day${currentDay}.jpg`;
+  const bgClassName = currentEvent.backgroundClassName ?? '';
+
   return (
-    <ScenarioStage leftHud={leftHud} onExit={exitScenario}>
+    <ScenarioStage backgroundUrl={bgUrl} backgroundClassName={bgClassName} leftHud={leftHud} onExit={exitScenario}>
       {showUnlock && (
         <div className="unlock-overlay" onClick={() => setShowUnlock(false)}>
           <div className="unlock-card" onClick={(e) => e.stopPropagation()}>

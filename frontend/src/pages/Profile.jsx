@@ -236,25 +236,29 @@ export default function Profile({
             <>
               <section className="profile-section">
                 <h2 className="profile-section__title">Профиль</h2>
-                <p className="profile-section__subtitle">Здесь можно менять имя, логин и почту.</p>
+                <p className="profile-section__subtitle">Здесь можно менять имя, логин и почту. Имя и логин — до 10 символов.</p>
                 <div className="profile-form">
                   <div className="profile-form__row">
                     <label className="profile-form__label">
-                      Имя
+                      Имя (до 10 символов)
                       <input
                         type="text"
                         className="profile-form__input"
                         value={name}
-                        onChange={(e) => setName(e.target.value)}
+                        onChange={(e) => setName(e.target.value.slice(0, 10))}
+                        maxLength={10}
+                        placeholder="До 10 символов"
                       />
                     </label>
                     <label className="profile-form__label">
-                      Логин
+                      Логин (до 10 символов)
                       <input
                         type="text"
                         className="profile-form__input"
                         value={login}
-                        onChange={(e) => setLogin(e.target.value)}
+                        onChange={(e) => setLogin(e.target.value.slice(0, 10))}
+                        maxLength={10}
+                        placeholder="До 10 символов"
                       />
                     </label>
                   </div>
@@ -404,6 +408,7 @@ export default function Profile({
                     if (a.code === 'smart_friend') icon = '🎁';
                     if (a.code === 'quiz_master') icon = '❓';
                     if (a.code === 'investment_champion') icon = '📈';
+                    if (a.code === 'lemonade_champion') icon = '🍋';
                     if (a.code === 'island_survivor') icon = '🏝️';
                     if (a.code === 'island_100') icon = '🌟';
 
@@ -417,6 +422,11 @@ export default function Profile({
                       const invProgress = user.Progresses?.find((p) => p.Scenario?.code === 'investment_race');
                       const best = invProgress?.bestResult ?? null;
                       if (best != null) description = `Лучший баланс в конце игры: ${best} руб.`;
+                    }
+                    if (a.code === 'lemonade_champion') {
+                      const bizProgress = user.Progresses?.find((p) => p.Scenario?.code === 'lemonade_business');
+                      const best = bizProgress?.bestResult ?? null;
+                      if (best != null) description = `Итоговый баланс: ${best} руб.`;
                     }
                     if (a.code === 'island_survivor') {
                       const bestDays = user.islandBestDays ?? 0;

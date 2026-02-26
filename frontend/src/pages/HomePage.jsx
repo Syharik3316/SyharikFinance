@@ -274,8 +274,8 @@ export default function HomePage({ apiBase, onPlay, onLogin, onShowLeaderboard, 
     <button
       type="button"
       className="home-support-chat"
-      title="Чат с ИИ-помощником — задать вопрос по финансам"
-      aria-label="Открыть чат с ИИ-помощником"
+      title="Чат с SyharikAI — задать вопрос по финансам"
+      aria-label="Открыть чат с SyharikAI"
       aria-expanded={chatOpen}
       onClick={() => setChatOpen((v) => !v)}
     >

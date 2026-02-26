@@ -40,7 +40,7 @@ export function MusicProvider({ children, playWhenView }) {
   useEffect(() => {
     const audio = new Audio();
     audio.loop = true;
-    audio.volume = 0.12;
+    audio.volume = 0.04;
     audio.preload = 'auto';
     audioRef.current = audio;
     return () => {

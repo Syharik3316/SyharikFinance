@@ -849,7 +849,10 @@ a:hover {
 }
 
 .ai-chat-panel__title-icon {
-  font-size: 1.2rem;
+  width: 1.4rem;
+  height: 1.4rem;
+  object-fit: contain;
+  border-radius: 4px;
 }
 
 .ai-chat-panel__close {
@@ -894,6 +897,13 @@ a:hover {
 .ai-chat-msg__avatar {
   flex-shrink: 0;
   font-size: 1.2rem;
+}
+
+.ai-chat-msg__avatar-img {
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
+  border-radius: 4px;
 }
 
 .ai-chat-msg__bubble {
@@ -2569,6 +2579,17 @@ a:hover {
   background: var(--color-gray-100);
 }
 
+.island-game-menu-item--primary {
+  background: var(--color-green);
+  color: var(--color-white);
+  font-weight: 600;
+  text-align: center;
+}
+.island-game-menu-item--primary:hover {
+  background: var(--color-green-light);
+  color: var(--color-white);
+}
+
 .island-game-mobile-panel {
   display: none;
 }
@@ -3670,6 +3691,12 @@ a:hover {
     flex-wrap: wrap;
     gap: 10px;
     flex-shrink: 0;
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 20;
+    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.1);
   }
 
   .island-game-footer-reset.island-game-desk-only {

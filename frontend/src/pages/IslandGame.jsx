@@ -348,6 +348,7 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
   const [confirmReset, setConfirmReset] = useState(false);
   const [warehouseModalOpen, setWarehouseModalOpen] = useState(false);
   const [rulesModalOpen, setRulesModalOpen] = useState(false);
+  const [showRulesBeforeStart, setShowRulesBeforeStart] = useState(false);
   const [gameOverMeta, setGameOverMeta] = useState(null);
 
   const loadGame = useCallback(async () => {
@@ -849,13 +850,25 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
           <p className="text-muted" style={{ fontSize: '0.9rem' }}>
             Сложность: <strong>{difficulty === 'expert' ? 'Знаток' : 'Новичок'}</strong> (задаётся в главном меню).
           </p>
-          <button type="button" className="primary-btn" onClick={startNewGame}>
+          <button type="button" className="primary-btn" onClick={() => { setShowRulesBeforeStart(true); setRulesModalOpen(true); }}>
             Начать игру
           </button>
           <button type="button" className="secondary-btn" onClick={onBack} style={{ marginTop: 12 }}>
             Назад
           </button>
         </div>
+
+        {rulesModalOpen && (
+          <div className="island-game-modal-backdrop" onClick={() => { setRulesModalOpen(false); if (showRulesBeforeStart) { setShowRulesBeforeStart(false); startNewGame(); } }}>
+            <div className="island-game-modal island-game-rules-modal" onClick={(e) => e.stopPropagation()}>
+              <h3>Правила игры</h3>
+              <div className="island-game-rules-text">{RULES_TEXT}</div>
+              <button type="button" className="primary-btn" onClick={() => { setRulesModalOpen(false); if (showRulesBeforeStart) { setShowRulesBeforeStart(false); startNewGame(); } }}>
+                Понятно, начать
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -1046,6 +1059,11 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
               <>
                 <div className="island-game-menu-backdrop" onClick={() => setMobileMenuOpen(false)} aria-hidden="true" />
                 <div className="island-game-menu-dropdown" role="menu">
+                  {phase === 'assign' && (
+                    <button type="button" className="island-game-menu-item island-game-menu-item--primary" role="menuitem" onClick={() => openMenuAnd(endDay)}>
+                      ▶ Следующий день
+                    </button>
+                  )}
                   <button type="button" className="island-game-menu-item" role="menuitem" onClick={() => openMenuAnd(() => setMobilePanel('shop'))}>
                     🏪 Магазин построек
                   </button>

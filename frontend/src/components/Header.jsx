@@ -52,9 +52,6 @@ export default function Header({ onGoHome, onGoProfile, onGoLogin, onGoMap, onGo
             <button type="button" className="header-nav-btn" onClick={onGoMap}>
               К карте
             </button>
-            <button type="button" className="header-nav-btn" onClick={onGoGames}>
-              Мини-игра
-            </button>
           </nav>
         )}
 
