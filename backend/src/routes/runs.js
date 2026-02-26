@@ -2,9 +2,23 @@ const express = require('express');
 const { Op } = require('sequelize');
 
 const { authMiddleware } = require('../middleware/auth');
-const { User, Scenario, ScenarioRun, Progress, Achievement } = require('../models');
+const { sequelize, User, Scenario, ScenarioRun, Progress, Achievement } = require('../models');
 
 const router = express.Router();
+
+/** Минимальный dayIndex (0-based), при котором сценарий считается реально пройденным. Защита от finish без игры. */
+function getMinDayIndexToComplete(scenario) {
+  const code = scenario?.code;
+  if (code === 'bike_dream') return (scenario.maxDays || 30) - 1;
+  if (code === 'money_quiz') return 24; // 25 вопросов
+  if (code === 'lemonade_business') return (scenario.maxDays || 30) - 1;
+  if (code === 'investment_race') return (scenario.maxDays || 20) - 1;
+  return 0;
+}
+
+/** Последний restart по user+scenario для rate limit (мс). */
+const lastRestartAt = new Map();
+const RESTART_COOLDOWN_MS = 15000; // 15 сек между restart по одному сценарию
 
 async function getScenarioOr404(code, res) {
   const scenario = await Scenario.findOne({ where: { code } });
@@ -15,8 +29,9 @@ async function getScenarioOr404(code, res) {
   return scenario;
 }
 
-async function upsertProgress({ userId, scenarioId, status, finalBudget, earned = 0, spent = 0 }) {
-  let progress = await Progress.findOne({ where: { userId, scenarioId } });
+async function upsertProgress({ userId, scenarioId, status, finalBudget, earned = 0, spent = 0 }, transaction = null) {
+  const opts = transaction ? { transaction } : {};
+  let progress = await Progress.findOne({ where: { userId, scenarioId }, ...opts });
 
   if (!progress) {
     progress = await Progress.create({
@@ -27,7 +42,7 @@ async function upsertProgress({ userId, scenarioId, status, finalBudget, earned 
       earned,
       spent,
       lastAttemptAt: new Date(),
-    });
+    }, opts);
     return progress;
   }
 
@@ -37,7 +52,7 @@ async function upsertProgress({ userId, scenarioId, status, finalBudget, earned 
   progress.earned += earned;
   progress.spent += spent;
   progress.lastAttemptAt = new Date();
-  await progress.save();
+  await progress.save(opts);
   return progress;
 }
 
@@ -155,92 +170,112 @@ router.post('/save', authMiddleware, async (req, res) => {
 });
 
 // Finish run -> write Progress + award achievements + close run
+// Защита: только при наличии активного run; награды только за реальное прохождение (dayIndex до конца) и только один раз (firstPass в транзакции).
 router.post('/finish', authMiddleware, async (req, res) => {
   try {
     const { scenarioCode, status, finalBudget, earned = 0, spent = 0 } = req.body;
     const scenario = await getScenarioOr404(scenarioCode, res);
     if (!scenario) return;
 
-    const user = await User.findByPk(req.user.id);
-    const existingProgress = await Progress.findOne({
-      where: { userId: user.id, scenarioId: scenario.id },
-    });
-    const firstPass = !existingProgress || existingProgress.status !== 'passed';
-
-    const progress = await upsertProgress({
-      userId: user.id,
-      scenarioId: scenario.id,
-      status,
-      finalBudget,
-      earned,
-      spent,
-    });
-
     const run = await ScenarioRun.findOne({
       where: {
-        userId: user.id,
+        userId: req.user.id,
         scenarioId: scenario.id,
         status: 'active',
       },
     });
-    const round = (n) => (Number.isFinite(n) ? Math.round(n) : n);
-    if (run) {
-      run.status = 'finished';
-      run.dayIndex = scenario.maxDays ? scenario.maxDays : run.dayIndex;
-      run.budget = round(Number.isFinite(finalBudget) ? finalBudget : run.budget);
-      run.earned = round(Number.isFinite(earned) ? earned : run.earned);
-      run.spent = round(Number.isFinite(spent) ? spent : run.spent);
-      await run.save();
+
+    if (!run) {
+      return res.status(400).json({ message: 'No active run to finish. Start or continue the scenario first.' });
     }
 
-    // Award achievements (prototype rules)
+    const minDay = getMinDayIndexToComplete(scenario);
+    const runCompleted = Number(run.dayIndex) >= minDay;
+    const round = (n) => (Number.isFinite(n) ? Math.round(n) : n);
+
+    const user = await User.findByPk(req.user.id);
+
+    const t = await sequelize.transaction();
+    try {
+      const progressRow = await Progress.findOne({
+        where: { userId: user.id, scenarioId: scenario.id },
+        lock: t.LOCK.UPDATE,
+        transaction: t,
+      });
+      const firstPass = !progressRow || progressRow.status !== 'passed';
+
+      await upsertProgress({
+        userId: user.id,
+        scenarioId: scenario.id,
+        status,
+        finalBudget,
+        earned,
+        spent,
+      }, t);
+
+      const shouldAward = status === 'passed' && firstPass && runCompleted;
+      if (shouldAward) {
+        const quizPass = scenario.code === 'money_quiz' && Number(finalBudget) >= 80;
+        const nonQuizPass = scenario.code !== 'money_quiz';
+        if (quizPass || nonQuizPass) {
+          user.experience = (user.experience || 0) + 50;
+          user.gems = Math.round((user.gems || 0) + 25);
+          await user.save({ transaction: t });
+        }
+      }
+
+      await t.commit();
+    } catch (err) {
+      await t.rollback();
+      throw err;
+    }
+
+    run.status = 'finished';
+    run.dayIndex = scenario.maxDays != null ? scenario.maxDays : run.dayIndex;
+    run.budget = round(Number.isFinite(finalBudget) ? finalBudget : run.budget);
+    run.earned = round(Number.isFinite(earned) ? earned : run.earned);
+    run.spent = round(Number.isFinite(spent) ? spent : run.spent);
+    await run.save();
+
     if (scenario.code === 'bike_dream' && status === 'passed') {
       if (Number(spent) === 0 && Number(finalBudget) >= Number(scenario.goal || 5000)) {
         await awardAchievementIfNeeded(user, 'bike_no_spend');
       }
     }
-
     if (scenario.code === 'money_quiz' && status === 'passed') {
       await awardAchievementIfNeeded(user, 'quiz_master');
     }
-
     if (scenario.code === 'investment_race') {
       await awardAchievementIfNeeded(user, 'investment_champion');
     }
-
     if (scenario.code === 'lemonade_business' && status === 'passed') {
       await awardAchievementIfNeeded(user, 'lemonade_champion');
     }
 
-    // XP: +50 за каждое первое прохождение сценария
-    if (status === 'passed' && firstPass) {
-      user.experience = (user.experience || 0) + 50;
-    }
-
-    // Алмазы: только за первое прохождение; за тест — только при результате от 80%
-    if (status === 'passed' && firstPass) {
-      const quizPass = scenario.code === 'money_quiz' && Number(finalBudget) >= 80;
-      const nonQuizPass = scenario.code !== 'money_quiz';
-      if (quizPass || nonQuizPass) {
-        user.gems = Math.round((user.gems || 0) + 25);
-      }
-    }
-
-    if (user.changed()) await user.save();
-
-    res.json({ progress, runClosed: Boolean(run) });
+    const progress = await Progress.findOne({ where: { userId: user.id, scenarioId: scenario.id } });
+    res.json({ progress, runClosed: true });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Failed to finish run' });
   }
 });
 
-// Optionally restart (delete active run)
+// Optionally restart (delete active run). Rate limit: не чаще раза в RESTART_COOLDOWN_MS по одному сценарию.
 router.post('/restart', authMiddleware, async (req, res) => {
   try {
     const { scenarioCode } = req.body;
     const scenario = await getScenarioOr404(scenarioCode, res);
     if (!scenario) return;
+
+    const key = `${req.user.id}:${scenario.id}`;
+    const now = Date.now();
+    const last = lastRestartAt.get(key);
+    if (last != null && now - last < RESTART_COOLDOWN_MS) {
+      return res.status(429).json({
+        message: `Перезапуск можно делать не чаще раза в ${RESTART_COOLDOWN_MS / 1000} сек. Подожди немного.`,
+      });
+    }
+    lastRestartAt.set(key, now);
 
     await ScenarioRun.destroy({
       where: {

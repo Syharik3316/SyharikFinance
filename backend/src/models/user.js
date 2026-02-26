@@ -81,6 +81,17 @@ const User = sequelize.define(
       defaultValue: 0,
       comment: 'Лучший результат в мини-игре «Остров» (макс. дней)',
     },
+    telegramId: {
+      type: DataTypes.STRING(64),
+      allowNull: true,
+      unique: true,
+      comment: 'Telegram user id for bot sync',
+    },
+    telegramUsername: {
+      type: DataTypes.STRING(64),
+      allowNull: true,
+      comment: 'Telegram @username for display',
+    },
   },
   {
     tableName: 'users',

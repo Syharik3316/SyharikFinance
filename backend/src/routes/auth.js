@@ -171,7 +171,7 @@ router.post('/login', async (req, res) => {
     });
 
     if (!user) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.status(400).json({ message: 'Неверный логин или пароль' });
     }
 
     if (!user.isVerified) {
@@ -180,7 +180,7 @@ router.post('/login', async (req, res) => {
 
     const ok = await bcrypt.compare(String(password), user.passwordHash);
     if (!ok) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.status(400).json({ message: 'Неверный логин или пароль' });
     }
 
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {

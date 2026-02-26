@@ -8,6 +8,7 @@ const ScenarioRun = require('./scenarioRun');
 const Achievement = require('./achievement');
 const UserAchievement = require('./userAchievement');
 const IslandGameState = require('./islandGameState');
+const TelegramLinkToken = require('./telegramLinkToken');
 
 // Associations
 User.hasMany(Progress, { foreignKey: 'userId' });
@@ -40,6 +41,9 @@ Achievement.belongsToMany(User, {
 User.hasOne(IslandGameState, { foreignKey: 'userId' });
 IslandGameState.belongsTo(User, { foreignKey: 'userId' });
 
+User.hasMany(TelegramLinkToken, { foreignKey: 'userId' });
+TelegramLinkToken.belongsTo(User, { foreignKey: 'userId' });
+
 module.exports = {
   sequelize,
   User,
@@ -51,4 +55,5 @@ module.exports = {
   Achievement,
   UserAchievement,
   IslandGameState,
+  TelegramLinkToken,
 };

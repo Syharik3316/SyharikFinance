@@ -4,9 +4,18 @@ const multer = require('multer');
 const path = require('path');
 const { Op } = require('sequelize');
 
-const { User, Achievement } = require('../models');
+const { User, Achievement, TelegramLinkToken } = require('../models');
 const { authMiddleware } = require('../middleware/auth');
 const { sendMail } = require('../utils/mailer');
+
+const TELEGRAM_LINK_EXPIRES_MS = 10 * 60 * 1000; // 10 min
+
+function generateLinkToken() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s = '';
+  for (let i = 0; i < 6; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return s;
+}
 
 const router = express.Router();
 
@@ -61,6 +70,8 @@ router.get('/', authMiddleware, async (req, res) => {
       'experience',
       'unlockedScenarios',
       'islandBestDays',
+      'telegramId',
+      'telegramUsername',
       'createdAt',
     ],
     include: [
@@ -71,7 +82,11 @@ router.get('/', authMiddleware, async (req, res) => {
       },
     ],
   });
-  res.json(user);
+  const json = user.toJSON ? user.toJSON() : user;
+  json.telegramLinked = Boolean(json.telegramId);
+  delete json.telegramId;
+  if (!json.telegramLinked) delete json.telegramUsername;
+  res.json(json);
 });
 
 router.patch('/', authMiddleware, async (req, res) => {
@@ -180,6 +195,49 @@ router.post('/avatar', authMiddleware, upload.single('avatar'), async (req, res)
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Failed to upload avatar' });
+  }
+});
+
+// POST /api/me/telegram-link — выдать одноразовый код для привязки Telegram (только для авторизованного пользователя)
+router.post('/telegram-link', authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const linkCode = generateLinkToken();
+    const expiresAt = new Date(Date.now() + TELEGRAM_LINK_EXPIRES_MS);
+
+    await TelegramLinkToken.create({
+      token: linkCode,
+      userId: user.id,
+      expiresAt,
+    });
+
+    res.json({
+      linkCode,
+      expiresIn: Math.floor(TELEGRAM_LINK_EXPIRES_MS / 1000),
+      message: 'Send /link <code> to the bot within 10 minutes',
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to generate link code' });
+  }
+});
+
+// POST /api/me/telegram-unlink — отвязать Telegram от аккаунта
+router.post('/telegram-unlink', authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    user.telegramId = null;
+    user.telegramUsername = null;
+    await user.save();
+
+    res.json({ message: 'Telegram unlinked' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to unlink Telegram' });
   }
 });
 

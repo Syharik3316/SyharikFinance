@@ -32,6 +32,26 @@ async function ensureIslandBestDaysColumn() {
   console.log('Migration: added column users.islandBestDays');
 }
 
+/** Добавить колонки telegramId, telegramUsername в users при старте. */
+async function ensureTelegramColumns() {
+  const qi = sequelize.getQueryInterface();
+  const tableDesc = await qi.describeTable('users');
+  if (tableDesc.telegramId == null) {
+    await qi.addColumn('users', 'telegramId', {
+      type: sequelize.Sequelize.STRING(64),
+      allowNull: true,
+    });
+    console.log('Migration: added column users.telegramId');
+  }
+  if (tableDesc.telegramUsername == null) {
+    await qi.addColumn('users', 'telegramUsername', {
+      type: sequelize.Sequelize.STRING(64),
+      allowNull: true,
+    });
+    console.log('Migration: added column users.telegramUsername');
+  }
+}
+
 const usersRouter = require('./routes/users');
 const authRouter = require('./routes/auth');
 const meRouter = require('./routes/me');
@@ -42,6 +62,8 @@ const runsRouter = require('./routes/runs');
 const leaderboardRouter = require('./routes/leaderboard');
 const islandGameRouter = require('./routes/islandGame');
 const chatRouter = require('./routes/chat');
+const telegramRouter = require('./routes/telegram');
+const botScenarioRouter = require('./routes/botScenario');
 
 const app = express();
 
@@ -68,6 +90,8 @@ app.use('/api/runs', runsRouter);
 app.use('/api/leaderboard', leaderboardRouter);
 app.use('/api/island-game', islandGameRouter);
 app.use('/api/chat', chatRouter);
+app.use('/api/telegram', telegramRouter);
+app.use('/api/bot-scenario', botScenarioRouter);
 
 const PORT = process.env.PORT || 4000;
 
@@ -77,6 +101,7 @@ async function start() {
     // Без alter: true — иначе на таблице users с большим числом индексов MySQL даёт ER_TOO_MANY_KEYS (max 64).
     await sequelize.sync();
     await ensureIslandBestDaysColumn();
+    await ensureTelegramColumns();
     await seedInitialData();
 
     app.listen(PORT, () => {
