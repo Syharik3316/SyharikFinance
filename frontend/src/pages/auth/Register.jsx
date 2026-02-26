@@ -34,85 +34,76 @@ export default function Register({ apiBase, apiFetch, onBack, onRegistered }) {
   };
 
   return (
-    <div className="card">
-      <h2 style={{ marginTop: 0 }}>Регистрация</h2>
-      <p className="text-muted" style={{ marginTop: 6 }}>
-        После регистрации мы отправим код подтверждения на почту.
-      </p>
-
-      <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <input
-          value={login}
-          onChange={(e) => setLogin(e.target.value)}
-          placeholder="Логин"
-          style={{
-            padding: '10px 12px',
-            borderRadius: 12,
-            border: '1px solid rgba(148,163,184,0.7)',
-            background: 'rgba(15,23,42,0.9)',
-            color: '#f9fafb',
-          }}
-        />
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Имя"
-          style={{
-            padding: '10px 12px',
-            borderRadius: 12,
-            border: '1px solid rgba(148,163,184,0.7)',
-            background: 'rgba(15,23,42,0.9)',
-            color: '#f9fafb',
-          }}
-        />
-        <input
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email"
-          style={{
-            padding: '10px 12px',
-            borderRadius: 12,
-            border: '1px solid rgba(148,163,184,0.7)',
-            background: 'rgba(15,23,42,0.9)',
-            color: '#f9fafb',
-          }}
-        />
-        <input
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Пароль (мин. 6 символов)"
-          type="password"
-          style={{
-            padding: '10px 12px',
-            borderRadius: 12,
-            border: '1px solid rgba(148,163,184,0.7)',
-            background: 'rgba(15,23,42,0.9)',
-            color: '#f9fafb',
-          }}
-        />
-
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 8 }}>
-          <button className="primary-btn" type="submit" disabled={loading}>
-            {loading ? 'Создаём...' : 'Создать аккаунт'}
-          </button>
-          <button className="secondary-btn" type="button" onClick={onBack}>
-            Назад
-          </button>
+    <div className="login-page">
+      <main className="login-page__main">
+        <div className="container">
+          <section className="login-card">
+            <h1 className="login-card__title">Регистрация</h1>
+            <p className="login-card__subtitle">
+              После регистрации мы отправим код подтверждения на почту.
+            </p>
+            <form className="login-form" onSubmit={submit}>
+              <label className="login-form__label">
+                Логин
+                <input
+                  type="text"
+                  className="login-form__input"
+                  placeholder="Логин"
+                  value={login}
+                  onChange={(e) => setLogin(e.target.value)}
+                />
+              </label>
+              <label className="login-form__label">
+                Имя
+                <input
+                  type="text"
+                  className="login-form__input"
+                  placeholder="Имя"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </label>
+              <label className="login-form__label">
+                Email
+                <input
+                  type="email"
+                  className="login-form__input"
+                  placeholder="example@mail.ru"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </label>
+              <label className="login-form__label">
+                Пароль (мин. 6 символов)
+                <input
+                  type="password"
+                  className="login-form__input"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="new-password"
+                />
+              </label>
+              <div className="login-form__row">
+                <button className="btn btn--primary btn--lg" type="submit" disabled={loading}>
+                  {loading ? 'Создаём...' : 'Создать аккаунт'}
+                </button>
+                <button className="btn btn--outline" type="button" onClick={onBack}>
+                  Назад
+                </button>
+              </div>
+            </form>
+            {devCode && (
+              <p className="text-muted" style={{ marginTop: 16, fontSize: '0.85rem' }}>
+                Dev-режим: код подтверждения <strong>{devCode}</strong>
+              </p>
+            )}
+            {error && (
+              <p className="text-danger" style={{ marginTop: 16, fontSize: '0.9rem' }}>{error}</p>
+            )}
+          </section>
         </div>
-      </form>
-
-      {devCode && (
-        <div className="text-muted" style={{ marginTop: 10, fontSize: '0.85rem' }}>
-          Dev-режим: код подтверждения <strong>{devCode}</strong>
-        </div>
-      )}
-
-      {error && (
-        <div className="text-danger" style={{ marginTop: 10, fontSize: '0.85rem' }}>
-          {error}
-        </div>
-      )}
+      </main>
     </div>
   );
 }
-

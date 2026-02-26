@@ -1,6 +1,52 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ScenarioStage from '../components/ScenarioStage.jsx';
 
+/** Зажатие кнопки: повтор только после 1–2 сек удержания, затем плавное ускорение. Одиночный клик не дублируется. */
+function useHoldRepeat(action, { disabled }) {
+  const intervalRef = useRef(null);
+  const timeoutRef = useRef(null);
+  const speedRef = useRef(null);
+  const clear = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    if (speedRef.current) {
+      clearTimeout(speedRef.current);
+      speedRef.current = null;
+    }
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
+
+  const start = useCallback(() => {
+    if (disabled) return;
+    // Не вызываем action() сразу — одиночный клик обрабатывает только onClick (+1)
+    timeoutRef.current = setTimeout(() => {
+      timeoutRef.current = null;
+      let ms = 150;
+      const run = () => {
+        intervalRef.current = setInterval(() => {
+          action();
+        }, ms);
+      };
+      run();
+      // Через ~1 с ускоряем повтор
+      speedRef.current = setTimeout(() => {
+        speedRef.current = null;
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        ms = 70;
+        run();
+      }, 1000);
+    }, 1200);
+  }, [action, disabled]);
+
+  useEffect(() => () => clear(), [clear]);
+  return { start, clear };
+}
+
 /** Поле количества с ограничением по max и изменением зажатием ЛКМ вверх/вниз */
 function DragAmountInput({ value, onChange, max, min = 0, placeholder = '0', className }) {
   const maxClamp = Math.max(min, Number(max) || 0);
@@ -9,6 +55,24 @@ function DragAmountInput({ value, onChange, max, min = 0, placeholder = '0', cla
 
   const num = parseInt(value, 10);
   const currentVal = Number.isNaN(num) ? min : Math.min(maxClamp, Math.max(min, num));
+  const currentValRef = useRef(currentVal);
+  currentValRef.current = currentVal;
+
+  const inc = useCallback(() => {
+    const v = currentValRef.current;
+    const next = Math.min(maxClamp, v + 1);
+    currentValRef.current = next;
+    onChange(String(next));
+  }, [onChange, maxClamp]);
+  const dec = useCallback(() => {
+    const v = currentValRef.current;
+    const next = Math.max(min, v - 1);
+    currentValRef.current = next;
+    onChange(String(next));
+  }, [onChange, min]);
+
+  const { start: startInc, clear: clearInc } = useHoldRepeat(inc, { disabled: currentVal >= maxClamp });
+  const { start: startDec, clear: clearDec } = useHoldRepeat(dec, { disabled: currentVal <= min });
 
   const handleMouseDown = (e) => {
     if (maxClamp <= 0 && min === 0) return;
@@ -43,32 +107,65 @@ function DragAmountInput({ value, onChange, max, min = 0, placeholder = '0', cla
     }
     const n = parseInt(v, 10);
     if (Number.isNaN(n)) return;
-    onChange(String(Math.min(maxClamp, Math.max(min, n))));
+    // Разрешаем вводить любое неотрицательное число; ограничение по max проверяется при нажатии Купить/Продать
+    onChange(String(Math.max(min, n)));
   };
 
   return (
-    <div
-      className={`investment-drag-input-wrap ${dragging ? 'investment-drag-input-dragging' : ''}`}
-      onMouseDown={handleMouseDown}
-      title="Зажми и тяни вверх/вниз — число изменится"
-    >
-      <input
-        type="number"
-        min={min}
-        max={maxClamp}
-        placeholder={placeholder}
-        value={value}
-        onChange={handleInputChange}
-        className={className}
-      />
+    <div className="investment-amount-control">
+      <button
+        type="button"
+        className="investment-amount-btn investment-amount-btn--minus"
+        onClick={(e) => { e.preventDefault(); dec(); }}
+        onPointerDown={(e) => { e.preventDefault(); startDec(); }}
+        onPointerUp={clearDec}
+        onPointerLeave={clearDec}
+        onPointerCancel={clearDec}
+        disabled={currentVal <= min}
+        title="Уменьшить на 1 (зажми для ускорения)"
+        aria-label="Уменьшить"
+      >
+        −
+      </button>
+      <div
+        className={`investment-drag-input-wrap ${dragging ? 'investment-drag-input-dragging' : ''}`}
+        onMouseDown={handleMouseDown}
+        title="Зажми и тяни вверх/вниз — число изменится"
+      >
+        <input
+          type="number"
+          min={min}
+          max={maxClamp}
+          placeholder={placeholder}
+          value={value}
+          onChange={handleInputChange}
+          className={className}
+        />
+      </div>
+      <button
+        type="button"
+        className="investment-amount-btn investment-amount-btn--plus"
+        onClick={(e) => { e.preventDefault(); inc(); }}
+        onPointerDown={(e) => { e.preventDefault(); startInc(); }}
+        onPointerUp={clearInc}
+        onPointerLeave={clearInc}
+        onPointerCancel={clearInc}
+        disabled={currentVal >= maxClamp}
+        title="Увеличить на 1 (зажми для ускорения)"
+        aria-label="Увеличить"
+      >
+        +
+      </button>
     </div>
   );
 }
 
-// Сценарий «Инвестиционная гонка»: 20 ходов, старт 1000 монет. Цель — максимизировать портфель.
+// Сценарий «Инвестиционная гонка»: 20 ходов, старт 1000 руб. Цель — максимизировать портфель.
 const MAX_DAYS = 20;
 const START_BALANCE = 1000;
 const EVENT_CHANCE = 0.3;
+/** Спред: цена покупки выше базовой, цена продажи ниже (в долях от базовой цены). */
+const PRICE_SPREAD = 0.02;
 
 const ASSETS = [
   { id: 'toy', name: 'Акции игрушечной компании', emoji: '🧸', startPrice: 10, volatility: 0.08 },
@@ -93,7 +190,7 @@ const TIPS = [
   'Диверсификация: не вкладывай все деньги в один актив. Если с ним случится беда, потери будут меньше.',
   'Облигации почти не колеблются — надёжно, но доход маленький. Крипта рискованна, но может дать большой рост.',
   'Новости влияют на рынок: хорошие — цена растёт, плохие — падает. Учись реагировать на события.',
-  'Стоимость портфеля = свободные монеты + (количество каждого актива × его текущая цена).',
+  'Стоимость портфеля = свободные рубли + (количество каждого актива × его текущая цена).',
 ];
 
 function getInitialPrices() {
@@ -161,6 +258,7 @@ export default function ScenarioInvestment({ apiBase, apiFetch, user, scenario, 
   const [dayReport, setDayReport] = useState(null);
 
   const totalValue = portfolioValue(balance, holdings, prices);
+  const assetsValue = Math.round(totalValue - balance);
 
   const loadRun = useCallback(async () => {
     try {
@@ -177,7 +275,7 @@ export default function ScenarioInvestment({ apiBase, apiFetch, user, scenario, 
       const state = run.state || {};
       setIntroSeen(Boolean(state.introSeen));
       setDay(Math.min(maxDays, Math.max(1, state.day ?? 1)));
-      setBalance(Number.isFinite(state.balance) ? state.balance : startCapital);
+      setBalance(Math.round(Number.isFinite(state.balance) ? state.balance : startCapital));
       setHoldings(state.holdings ? { ...getInitialHoldings(), ...state.holdings } : getInitialHoldings());
       setPrices(state.prices ? { ...getInitialPrices(), ...state.prices } : getInitialPrices());
       setPortfolioHistory(Array.isArray(state.portfolioHistory) && state.portfolioHistory.length ? state.portfolioHistory : [startCapital]);
@@ -223,29 +321,40 @@ export default function ScenarioInvestment({ apiBase, apiFetch, user, scenario, 
     [apiBase, apiFetch, scenario?.code]
   );
 
+  const buyPrice = useCallback((assetId) => {
+    const base = prices[assetId] || 0;
+    return Math.round(base * (1 + PRICE_SPREAD) * 100) / 100;
+  }, [prices]);
+  const sellPrice = useCallback((assetId) => {
+    const base = prices[assetId] || 0;
+    return Math.round(base * (1 - PRICE_SPREAD) * 100) / 100;
+  }, [prices]);
+
   const buy = useCallback(
     (assetId, amount) => {
       const a = ASSETS.find((x) => x.id === assetId);
       if (!a || amount <= 0) return;
-      const cost = Math.round((prices[assetId] || 0) * amount);
+      const price = buyPrice(assetId);
+      const cost = Math.round(price * amount * 100) / 100;
       if (cost > balance) return;
-      setBalance((b) => b - cost);
+      setBalance((b) => Math.round(b - cost));
       setHoldings((h) => ({ ...h, [assetId]: (h[assetId] || 0) + amount }));
       setBuyAmounts((prev) => ({ ...prev, [assetId]: '' }));
     },
-    [prices, balance]
+    [buyPrice, balance]
   );
 
   const sell = useCallback(
     (assetId, amount) => {
       const have = holdings[assetId] || 0;
       if (amount <= 0 || amount > have) return;
-      const revenue = Math.round((prices[assetId] || 0) * amount);
-      setBalance((b) => b + revenue);
+      const price = sellPrice(assetId);
+      const revenue = Math.round(price * amount * 100) / 100;
+      setBalance((b) => Math.round(b + revenue));
       setHoldings((h) => ({ ...h, [assetId]: (h[assetId] || 0) - amount }));
       setSellAmounts((prev) => ({ ...prev, [assetId]: '' }));
     },
-    [prices, holdings]
+    [sellPrice, holdings]
   );
 
   const nextDay = useCallback(() => {
@@ -286,8 +395,10 @@ export default function ScenarioInvestment({ apiBase, apiFetch, user, scenario, 
 
     if (nextDayNum > maxDays) {
       const profit = nextVal - startCapital;
+      const endBalance = balance;
+      const endAssets = Math.round(nextVal - balance);
       setResultMessage(
-        `Игра окончена! Стоимость твоего портфеля: ${nextVal} монет. ${profit >= 0 ? `Прибыль: +${profit}` : `Убыток: ${profit}`}. Ты узнал(а), что доходность, риск и диверсификация — основы инвестирования.`
+        `Игра окончена! Свободные рубли: ${Math.round(endBalance)} руб., активы: ${endAssets} руб., итого: ${nextVal} руб. ${profit >= 0 ? `Прибыль: +${profit}` : `Убыток: ${profit}`}. Ты узнал(а), что доходность, риск и диверсификация — основы инвестирования.`
       );
     }
   }, [day, balance, holdings, prices, portfolioHistory, priceHistory, totalValue, maxDays, startCapital, saveRun]);
@@ -328,7 +439,7 @@ export default function ScenarioInvestment({ apiBase, apiFetch, user, scenario, 
 
   if (loading) return <div className="text-muted">Загрузка...</div>;
 
-  const INTRO_TEXT = `Инвестиционная гонка — обучающая игра, в которой ты пробуешь себя в роли начинающего инвестора. Цель: за ${maxDays} ходов превратить стартовые ${startCapital} монет в как можно большую сумму, покупая и продавая активы.
+  const INTRO_TEXT = `Инвестиционная гонка — обучающая игра, в которой ты пробуешь себя в роли начинающего инвестора. Цель: за ${maxDays} ходов превратить стартовые ${startCapital} руб. в как можно большую сумму, покупая и продавая активы.
 
 Доступны 4 актива:
 • 🧸 Акции игрушечной компании — волатильны, реагируют на хиты и провалы.
@@ -387,12 +498,16 @@ export default function ScenarioInvestment({ apiBase, apiFetch, user, scenario, 
         <span className="hud-value">{day}/{maxDays}</span>
       </div>
       <div className="hud-pill">
-        <span className="hud-label">💰</span>
-        <span className="hud-value">{balance}</span>
+        <span className="hud-label">💰 Свободные</span>
+        <span className="hud-value">{Math.round(balance)}</span>
       </div>
       <div className="hud-pill">
-        <span className="hud-label">📊 Портфель</span>
-        <span className="hud-value">{totalValue}</span>
+        <span className="hud-label">📊 Активы</span>
+        <span className="hud-value">{assetsValue}</span>
+      </div>
+      <div className="hud-pill">
+        <span className="hud-label">Итого</span>
+        <span className="hud-value">{Math.round(totalValue)}</span>
       </div>
     </>
   );
@@ -405,7 +520,7 @@ export default function ScenarioInvestment({ apiBase, apiFetch, user, scenario, 
             <div className="speaker-name">📈 Графики</div>
           </div>
             <div className="investment-chart-wrap">
-            <div className="investment-chart-label">Стоимость портфеля (монеты)</div>
+            <div className="investment-chart-label">Стоимость портфеля (рубли)</div>
             <div className="investment-chart investment-chart-line-wrap" style={{ height: chartHeight }}>
               <svg viewBox={`0 0 ${Math.max(100, portfolioHistory.length * 4)} ${chartHeight}`} preserveAspectRatio="none" className="investment-line-chart">
                 <path
@@ -454,9 +569,10 @@ export default function ScenarioInvestment({ apiBase, apiFetch, user, scenario, 
           <p className="investment-kid-hint">Введи количество и нажми «Купить» или «Продать»</p>
           <div className="investment-asset-cards">
             {ASSETS.map((a) => {
-              const price = prices[a.id] || 0;
+              const buyPriceVal = buyPrice(a.id);
+              const sellPriceVal = sellPrice(a.id);
               const qty = holdings[a.id] || 0;
-              const maxBuy = price > 0 ? Math.floor(balance / price) : 0;
+              const maxBuy = buyPriceVal > 0 ? Math.floor(balance / buyPriceVal) : 0;
               const maxSell = qty;
               const buyAmt = buyAmounts[a.id] ?? '';
               const sellAmt = sellAmounts[a.id] ?? '';
@@ -471,7 +587,7 @@ export default function ScenarioInvestment({ apiBase, apiFetch, user, scenario, 
                 }
                 const n = parseInt(val, 10);
                 if (Number.isNaN(n)) return;
-                setBuyAmounts((p) => ({ ...p, [a.id]: String(Math.max(0, Math.min(maxBuy, n))) }));
+                setBuyAmounts((p) => ({ ...p, [a.id]: String(Math.max(0, n)) }));
               };
               const setSellAmt = (val) => {
                 if (val === '' || val === '-') {
@@ -480,7 +596,7 @@ export default function ScenarioInvestment({ apiBase, apiFetch, user, scenario, 
                 }
                 const n = parseInt(val, 10);
                 if (Number.isNaN(n)) return;
-                setSellAmounts((p) => ({ ...p, [a.id]: String(Math.max(0, Math.min(maxSell, n))) }));
+                setSellAmounts((p) => ({ ...p, [a.id]: String(Math.max(0, n)) }));
               };
               return (
                 <div key={a.id} className="investment-asset-card">
@@ -488,7 +604,9 @@ export default function ScenarioInvestment({ apiBase, apiFetch, user, scenario, 
                     <span className="investment-asset-card-emoji">{a.emoji}</span>
                     <span className="investment-asset-card-name">{a.name}</span>
                   </div>
-                  <div className="investment-asset-card-price">Цена: <strong>{price.toFixed(2)}</strong> монет</div>
+                  <div className="investment-asset-card-price">
+                    Покупка: <strong>{buyPriceVal.toFixed(2)}</strong> · Продажа: <strong>{sellPriceVal.toFixed(2)}</strong> руб.
+                  </div>
                   <div className="investment-asset-card-qty">У тебя: <strong>{qty}</strong> шт.</div>
                   <div className="investment-asset-card-actions">
                     <div className="investment-asset-row">
@@ -552,9 +670,9 @@ export default function ScenarioInvestment({ apiBase, apiFetch, user, scenario, 
               </ul>
             </div>
             <div className="investment-day-report-section">
-              <div className="investment-chart-label">Твой портфель</div>
+              <div className="investment-chart-label">Итого (свободные + активы)</div>
               <p className="investment-day-report-portfolio">
-                Было: <strong>{dayReport.prevValue}</strong> монет → стало: <strong>{dayReport.newValue}</strong> монет
+                Было: <strong>{dayReport.prevValue}</strong> руб. → стало: <strong>{dayReport.newValue}</strong> руб.
                 {dayReport.newValue !== dayReport.prevValue && (
                   <span className={dayReport.newValue >= dayReport.prevValue ? 'text-success' : 'text-danger'}>
                     {' '}({dayReport.newValue >= dayReport.prevValue ? '+' : ''}{dayReport.newValue - dayReport.prevValue})

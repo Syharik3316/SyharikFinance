@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function BudgetStatus({ budget, label, difficulty, bump, unit = 'монет' }) {
+export default function BudgetStatus({ budget, label, difficulty, bump, unit = 'руб.' }) {
   return (
     <div className="status-bar">
       <div className="status-left">
@@ -10,7 +10,7 @@ export default function BudgetStatus({ budget, label, difficulty, bump, unit = '
             className={`fade-number ${bump ? 'bump' : ''}`}
             style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}
           >
-            {budget} {unit}
+            {Number.isFinite(budget) ? Math.round(budget) : budget} {unit}
           </span>
         </div>
         {label && (

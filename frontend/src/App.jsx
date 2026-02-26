@@ -1,15 +1,19 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { MusicProvider } from './contexts/MusicContext.jsx';
 import ScenarioMap from './pages/ScenarioMap.jsx';
 import ScenarioSavings from './pages/ScenarioSavings.jsx';
-import ScenarioBirthday from './pages/ScenarioBirthday.jsx';
 import ScenarioQuiz from './pages/ScenarioQuiz.jsx';
 import IslandGame from './pages/IslandGame.jsx';
 import ScenarioBusiness from './pages/ScenarioBusiness.jsx';
 import ScenarioInvestment from './pages/ScenarioInvestment.jsx';
+import HomePage from './pages/HomePage.jsx';
 import Login from './pages/auth/Login.jsx';
 import Register from './pages/auth/Register.jsx';
 import VerifyEmail from './pages/auth/VerifyEmail.jsx';
 import Profile from './pages/Profile.jsx';
+import LeaderboardPage from './pages/LeaderboardPage.jsx';
+import Header from './components/Header.jsx';
+import Footer from './components/Footer.jsx';
 import { apiFetch, clearToken, getToken, setToken } from './lib/api.js';
 
 // Используем относительный путь, чтобы в проде ходить на тот же origin,
@@ -17,11 +21,13 @@ import { apiFetch, clearToken, getToken, setToken } from './lib/api.js';
 const API_BASE = '/api';
 
 export const Views = {
+  HOME: 'HOME',
   LOGIN: 'LOGIN',
   REGISTER: 'REGISTER',
   VERIFY: 'VERIFY',
   PROFILE: 'PROFILE',
   MAP: 'MAP',
+  LEADERBOARD: 'LEADERBOARD',
   SAVINGS: 'SAVINGS',
   BIRTHDAY: 'BIRTHDAY',
   QUIZ: 'QUIZ',
@@ -30,14 +36,37 @@ export const Views = {
   INVESTMENT: 'INVESTMENT',
 };
 
+const DIFFICULTY_STORAGE_KEY = 'syharik_difficulty';
+const VIEW_STORAGE_KEY = 'devhack_view';
+const SCENARIO_CODE_STORAGE_KEY = 'devhack_scenario_code';
+
+const FULLSCREEN_VIEWS = [Views.SAVINGS, Views.QUIZ, Views.ISLAND_GAME, Views.BUSINESS, Views.INVESTMENT];
+const SCENARIO_VIEWS = [Views.SAVINGS, Views.QUIZ, Views.BUSINESS, Views.INVESTMENT];
+const RESTORABLE_VIEWS = [Views.HOME, Views.PROFILE, Views.MAP, Views.LEADERBOARD, ...SCENARIO_VIEWS, Views.ISLAND_GAME];
+
 export default function App() {
-  const [view, setView] = useState(Views.LOGIN);
+  const [view, setView] = useState(Views.HOME);
   const [user, setUser] = useState(null);
+  const [profileSection, setProfileSection] = useState('profile');
   const [currentScenario, setCurrentScenario] = useState(null);
   const [budgetBump, setBudgetBump] = useState(false);
   const [booting, setBooting] = useState(true);
   const [verifyEmail, setVerifyEmail] = useState('');
-  const [difficulty, setDifficulty] = useState('novice'); // 'novice' | 'expert'
+  const [difficulty, setDifficulty] = useState(() => {
+    try {
+      const v = localStorage.getItem(DIFFICULTY_STORAGE_KEY);
+      return v === 'expert' ? 'expert' : 'novice';
+    } catch {
+      return 'novice';
+    }
+  });
+
+  const handleDifficultyChange = (v) => {
+    setDifficulty(v);
+    try {
+      localStorage.setItem(DIFFICULTY_STORAGE_KEY, v);
+    } catch {}
+  };
 
   const handleBudgetChangeAnimation = () => {
     setBudgetBump(true);
@@ -56,7 +85,7 @@ export default function App() {
         if (!token) {
           if (!alive) return;
           setBooting(false);
-          setView(Views.LOGIN);
+          setView(Views.HOME);
           return;
         }
 
@@ -65,13 +94,40 @@ export default function App() {
           clearToken();
           if (!alive) return;
           setBooting(false);
-          setView(Views.LOGIN);
+          setView(Views.HOME);
           return;
         }
         const me = await res.json();
         if (!alive) return;
         setUser(me);
-        setView(Views.PROFILE);
+
+        try {
+          const storedView = sessionStorage.getItem(VIEW_STORAGE_KEY);
+          const storedCode = sessionStorage.getItem(SCENARIO_CODE_STORAGE_KEY);
+          if (storedView && RESTORABLE_VIEWS.includes(storedView)) {
+            if (SCENARIO_VIEWS.includes(storedView) && storedCode) {
+              const scenariosRes = await authedApiFetch(`${API_BASE}/scenarios`);
+              if (scenariosRes.ok && alive) {
+                const list = await scenariosRes.json();
+                const scenario = list.find((s) => s.code === storedCode);
+                if (scenario) {
+                  setCurrentScenario(scenario);
+                  setView(storedView);
+                } else {
+                  setView(Views.MAP);
+                }
+              } else {
+                setView(Views.MAP);
+              }
+            } else {
+              setView(storedView);
+            }
+          } else {
+            setView(Views.HOME);
+          }
+        } catch {
+          setView(Views.HOME);
+        }
       } finally {
         if (alive) setBooting(false);
       }
@@ -81,6 +137,19 @@ export default function App() {
       alive = false;
     };
   }, [authedApiFetch]);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(VIEW_STORAGE_KEY, view);
+      if (SCENARIO_VIEWS.includes(view) && currentScenario?.code) {
+        sessionStorage.setItem(SCENARIO_CODE_STORAGE_KEY, currentScenario.code);
+      } else {
+        sessionStorage.removeItem(SCENARIO_CODE_STORAGE_KEY);
+      }
+    } catch {
+      // ignore
+    }
+  }, [view, currentScenario]);
 
   useEffect(() => {
     let alive = true;
@@ -103,57 +172,44 @@ export default function App() {
     };
   }, [authedApiFetch, user, view]);
 
+  const playMusicWhen = FULLSCREEN_VIEWS.includes(view);
+
   return (
+    <MusicProvider playWhenView={playMusicWhen}>
     <div className="app-shell">
-      {![Views.SAVINGS, Views.BIRTHDAY, Views.QUIZ, Views.ISLAND_GAME].includes(view) && (
-        <header className="app-header">
-          <div className="app-title-wrapper">
-            <a
-              href="https://syharik.ru"
-              className="app-brand-link"
-              target="_blank"
-              rel="noreferrer"
-            >
-              <span className="header-logo-slot" />
-              <span className="app-brand-text">SyharikFinance</span>
-            </a>
-          </div>
-          <div className="header-user-slot">
-            {user && (
-              <button
-                type="button"
-                className="header-user-btn"
-                onClick={() => setView(Views.PROFILE)}
-              >
-                <div className="avatar-circle small" style={{ overflow: 'hidden' }}>
-                  {user.avatarUrl ? (
-                    <img
-                      src={user.avatarUrl}
-                      alt="avatar"
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                  ) : (
-                    (user.name || user.login || '?').charAt(0).toUpperCase()
-                  )}
-                </div>
-                <div style={{ textAlign: 'left' }}>
-                  <div style={{ fontSize: '0.9rem' }}>{user.name}</div>
-                  <div className="text-muted" style={{ fontSize: '0.8rem' }}>
-                    @{user.login}
-                  </div>
-                </div>
-              </button>
-            )}
-          </div>
-        </header>
+      {!FULLSCREEN_VIEWS.includes(view) && (
+        <Header
+          onGoHome={() => setView(Views.HOME)}
+          onOpenProfileSection={(section) => {
+            setProfileSection(section || 'profile');
+            setView(Views.PROFILE);
+          }}
+          onGoLogin={() => setView(Views.LOGIN)}
+          onGoMap={() => setView(Views.MAP)}
+          onGoGames={() => setView(Views.ISLAND_GAME)}
+          onLogout={() => {
+            clearToken();
+            setUser(null);
+            setView(Views.HOME);
+          }}
+          user={user}
+        />
       )}
 
       <main
-        className={[Views.SAVINGS, Views.BIRTHDAY, Views.QUIZ, Views.ISLAND_GAME, Views.BUSINESS, Views.INVESTMENT].includes(view)
-          ? 'app-main scenario-main'
-          : 'app-main'}
+        className={FULLSCREEN_VIEWS.includes(view) ? 'app-main scenario-main' : 'app-main'}
       >
-        {booting && <div className="text-muted">Загрузка...</div>}
+        {booting && <div className="container" style={{ paddingTop: 24 }}><div className="text-muted">Загрузка...</div></div>}
+
+        {!booting && view === Views.HOME && (
+          <HomePage
+            apiBase={API_BASE}
+            onPlay={() => setView(Views.MAP)}
+            onLogin={() => setView(Views.LOGIN)}
+            onShowLeaderboard={() => setView(Views.LEADERBOARD)}
+            user={user}
+          />
+        )}
 
         {!booting && view === Views.LOGIN && (
           <Login
@@ -163,13 +219,12 @@ export default function App() {
             onVerified={() => setView(Views.LOGIN)}
             onLoggedIn={(token) => {
               setToken(token);
-              // сразу грузим профиль
               (async () => {
                 const res = await authedApiFetch(`${API_BASE}/me`);
                 if (res.ok) {
                   const me = await res.json();
                   setUser(me);
-                  setView(Views.PROFILE);
+                  setView(Views.HOME);
                 }
               })();
             }}
@@ -205,7 +260,7 @@ export default function App() {
                   const me = await res.json();
                   setUser(me);
                 }
-                setView(Views.PROFILE);
+                setView(Views.HOME);
               } else {
                 setView(Views.LOGIN);
               }
@@ -218,6 +273,8 @@ export default function App() {
             apiBase={API_BASE}
             apiFetch={authedApiFetch}
             user={user}
+            initialSection={profileSection}
+            onGoHome={() => setView(Views.HOME)}
             onUserUpdated={async () => {
               const res = await authedApiFetch(`${API_BASE}/me`);
               if (res.ok) {
@@ -234,8 +291,18 @@ export default function App() {
             onLogout={() => {
               clearToken();
               setUser(null);
-              setView(Views.LOGIN);
+              setView(Views.HOME);
             }}
+            difficulty={difficulty}
+            onDifficultyChange={handleDifficultyChange}
+          />
+        )}
+
+        {!booting && view === Views.LEADERBOARD && (
+          <LeaderboardPage
+            apiBase={API_BASE}
+            user={user}
+            onBack={() => setView(Views.HOME)}
           />
         )}
 
@@ -245,7 +312,7 @@ export default function App() {
             apiFetch={authedApiFetch}
             user={user}
             difficulty={difficulty}
-            onChangeDifficulty={setDifficulty}
+            onOpenIslandGame={() => setView(Views.ISLAND_GAME)}
             onUserUpdated={async () => {
               const res = await authedApiFetch(`${API_BASE}/me`);
               if (res.ok) {
@@ -257,8 +324,6 @@ export default function App() {
               setCurrentScenario(scenario);
               if (scenario.code === 'bike_dream') {
                 setView(Views.SAVINGS);
-              } else if (scenario.code === 'friend_birthday') {
-                setView(Views.BIRTHDAY);
               } else if (scenario.code === 'money_quiz') {
                 setView(Views.QUIZ);
               } else if (scenario.code === 'lemonade_business') {
@@ -279,17 +344,6 @@ export default function App() {
             difficulty={difficulty}
             budgetBump={budgetBump}
             onBudgetBump={handleBudgetChangeAnimation}
-            onBackToMap={() => setView(Views.MAP)}
-          />
-        )}
-
-        {view === Views.BIRTHDAY && user && currentScenario && (
-          <ScenarioBirthday
-            apiBase={API_BASE}
-            apiFetch={authedApiFetch}
-            user={user}
-            scenario={currentScenario}
-            difficulty={difficulty}
             onBackToMap={() => setView(Views.MAP)}
           />
         )}
@@ -331,21 +385,23 @@ export default function App() {
           <IslandGame
             apiBase={API_BASE}
             apiFetch={authedApiFetch}
+            user={user}
             difficulty={difficulty}
             onBack={() => setView(Views.PROFILE)}
+            onUserUpdated={async () => {
+              const res = await authedApiFetch(`${API_BASE}/me`);
+              if (res.ok) {
+                const me = await res.json();
+                setUser(me);
+              }
+            }}
           />
         )}
       </main>
-      {![Views.SAVINGS, Views.BIRTHDAY, Views.QUIZ, Views.ISLAND_GAME, Views.BUSINESS].includes(view) && (
-        <footer className="app-footer">
-          <nav className="app-footer-links">
-            <a href="https://syharik.ru" target="_blank" rel="noreferrer">SyharikFinance</a>
-            <a href="mailto:admin@syharik.ru">Связаться с нами</a>
-          </nav>
-          <div>© 2026 SyharikFinance. Все права защищены.</div>
-          <div>e-mail: admin@syharik.ru</div>
-        </footer>
+      {!FULLSCREEN_VIEWS.includes(view) && (
+        <Footer onGoHome={() => setView(Views.HOME)} />
       )}
     </div>
+    </MusicProvider>
   );
 }

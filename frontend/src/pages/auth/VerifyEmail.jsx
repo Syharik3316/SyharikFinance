@@ -1,17 +1,22 @@
 import React, { useState } from 'react';
 
 export default function VerifyEmail({ apiBase, apiFetch, defaultEmail, onBack, onVerified }) {
-  const [email, setEmail] = useState(defaultEmail || '');
+  const email = defaultEmail || '';
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [devCode, setDevCode] = useState('');
+  const [resendTarget, setResendTarget] = useState('');
 
   const submit = async (e) => {
     e.preventDefault();
     setError('');
     setInfo('');
+    if (!email) {
+      setError('Не указана почта для подтверждения.');
+      return;
+    }
     try {
       setLoading(true);
       const res = await apiFetch(`${apiBase}/auth/verify`, {
@@ -36,6 +41,11 @@ export default function VerifyEmail({ apiBase, apiFetch, defaultEmail, onBack, o
     setError('');
     setInfo('');
     setDevCode('');
+    setResendTarget('');
+    if (!email) {
+      setError('Не указана почта.');
+      return;
+    }
     try {
       setLoading(true);
       const res = await apiFetch(`${apiBase}/auth/resend-code`, {
@@ -48,7 +58,8 @@ export default function VerifyEmail({ apiBase, apiFetch, defaultEmail, onBack, o
         return;
       }
       if (data.devCode) setDevCode(data.devCode);
-      setInfo('Код отправлен ещё раз. Проверь почту.');
+      setResendTarget(email);
+      setInfo(`Код отправлен на ${email}. Проверь почту.`);
     } catch {
       setError('Не удалось отправить код. Проверь backend.');
     } finally {
@@ -57,69 +68,57 @@ export default function VerifyEmail({ apiBase, apiFetch, defaultEmail, onBack, o
   };
 
   return (
-    <div className="card">
-      <h2 style={{ marginTop: 0 }}>Подтверждение почты</h2>
-      <p className="text-muted" style={{ marginTop: 6 }}>
-        Введи 6-значный код, который пришёл на email.
-      </p>
-
-      <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <input
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email"
-          style={{
-            padding: '10px 12px',
-            borderRadius: 12,
-            border: '1px solid rgba(148,163,184,0.7)',
-            background: 'rgba(15,23,42,0.9)',
-            color: '#f9fafb',
-          }}
-        />
-        <input
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          placeholder="Код подтверждения"
-          style={{
-            padding: '10px 12px',
-            borderRadius: 12,
-            border: '1px solid rgba(148,163,184,0.7)',
-            background: 'rgba(15,23,42,0.9)',
-            color: '#f9fafb',
-          }}
-        />
-
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <button className="primary-btn" type="submit" disabled={loading}>
-            {loading ? 'Проверяем...' : 'Подтвердить'}
-          </button>
-          <button className="secondary-btn" type="button" disabled={loading} onClick={resend}>
-            Отправить код ещё раз
-          </button>
-          <button className="secondary-btn" type="button" onClick={onBack}>
-            Назад
-          </button>
+    <div className="login-page">
+      <main className="login-page__main">
+        <div className="container">
+          <section className="login-card">
+            <h1 className="login-card__title">Подтверждение почты</h1>
+            <p className="login-card__subtitle">
+              Введи 6-значный код, который пришёл на почту{email ? ` ${email}` : ''}.
+            </p>
+            <form className="login-form" onSubmit={submit}>
+              <label className="login-form__label">
+                Код подтверждения
+                <input
+                  type="text"
+                  className="login-form__input"
+                  placeholder="000000"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  autoComplete="one-time-code"
+                />
+              </label>
+              <div className="login-form__row">
+                <button className="btn btn--primary btn--lg" type="submit" disabled={loading}>
+                  {loading ? 'Проверяем...' : 'Подтвердить'}
+                </button>
+                <button className="btn btn--outline" type="button" disabled={loading || !email} onClick={resend}>
+                  Отправить код ещё раз
+                </button>
+                <button className="btn btn--outline" type="button" onClick={onBack}>
+                  Назад
+                </button>
+              </div>
+            </form>
+            {resendTarget && (
+              <p className="text-muted" style={{ marginTop: 12, fontSize: '0.9rem' }}>
+                Код отправлен на <strong>{resendTarget}</strong>
+              </p>
+            )}
+            {devCode && (
+              <p className="text-muted" style={{ marginTop: 16, fontSize: '0.85rem' }}>
+                Dev-режим: код подтверждения <strong>{devCode}</strong>
+              </p>
+            )}
+            {info && (
+              <p className="text-success" style={{ marginTop: 16, fontSize: '0.9rem' }}>{info}</p>
+            )}
+            {error && (
+              <p className="text-danger" style={{ marginTop: 16, fontSize: '0.9rem' }}>{error}</p>
+            )}
+          </section>
         </div>
-      </form>
-
-      {devCode && (
-        <div className="text-muted" style={{ marginTop: 10, fontSize: '0.85rem' }}>
-          Dev-режим: код подтверждения <strong>{devCode}</strong>
-        </div>
-      )}
-
-      {info && (
-        <div className="text-success" style={{ marginTop: 10, fontSize: '0.85rem' }}>
-          {info}
-        </div>
-      )}
-
-      {error && (
-        <div className="text-danger" style={{ marginTop: 10, fontSize: '0.85rem' }}>
-          {error}
-        </div>
-      )}
+      </main>
     </div>
   );
 }
-

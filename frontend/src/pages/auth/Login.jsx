@@ -36,55 +36,52 @@ export default function Login({ apiBase, apiFetch, onRegister, onLoggedIn, onNee
   };
 
   return (
-    <div className="card">
-      <h2 style={{ marginTop: 0 }}>Вход</h2>
-      <p className="text-muted" style={{ marginTop: 6 }}>
-        Войди по логину или почте.
-      </p>
-
-      <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <input
-          value={loginOrEmail}
-          onChange={(e) => setLoginOrEmail(e.target.value)}
-          placeholder="Логин или email"
-          style={{
-            padding: '10px 12px',
-            borderRadius: 12,
-            border: '1px solid rgba(148,163,184,0.7)',
-            background: 'rgba(15,23,42,0.9)',
-            color: '#f9fafb',
-          }}
-        />
-        <input
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Пароль"
-          type="password"
-          style={{
-            padding: '10px 12px',
-            borderRadius: 12,
-            border: '1px solid rgba(148,163,184,0.7)',
-            background: 'rgba(15,23,42,0.9)',
-            color: '#f9fafb',
-          }}
-        />
-
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <button className="primary-btn" type="submit" disabled={loading}>
-            {loading ? 'Входим...' : 'Войти'}
-          </button>
-          <button className="secondary-btn" type="button" onClick={onRegister}>
-            Регистрация
-          </button>
+    <div className="login-page">
+      <main className="login-page__main">
+        <div className="container">
+          <section className="login-card">
+            <h1 className="login-card__title">Вход в аккаунт</h1>
+            <p className="login-card__subtitle">
+              Войди по логину или почте, чтобы сохранять прогресс и участвовать в игре.
+            </p>
+            <form className="login-form" onSubmit={submit}>
+              <label className="login-form__label">
+                Логин или email
+                <input
+                  type="text"
+                  className="login-form__input"
+                  placeholder="Логин или example@mail.ru"
+                  value={loginOrEmail}
+                  onChange={(e) => setLoginOrEmail(e.target.value)}
+                  autoComplete="username"
+                />
+              </label>
+              <label className="login-form__label">
+                Пароль
+                <input
+                  type="password"
+                  className="login-form__input"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                />
+              </label>
+              <div className="login-form__row">
+                <button className="btn btn--primary btn--lg" type="submit" disabled={loading}>
+                  {loading ? 'Входим...' : 'Войти'}
+                </button>
+                <button className="btn btn--outline" type="button" onClick={onRegister}>
+                  Регистрация
+                </button>
+              </div>
+            </form>
+            {error && (
+              <p className="text-danger" style={{ marginTop: 16, fontSize: '0.9rem' }}>{error}</p>
+            )}
+          </section>
         </div>
-      </form>
-
-      {error && (
-        <div className="text-danger" style={{ marginTop: 10, fontSize: '0.85rem' }}>
-          {error}
-        </div>
-      )}
+      </main>
     </div>
   );
 }
-

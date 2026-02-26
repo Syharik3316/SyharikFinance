@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useMusic } from '../contexts/MusicContext.jsx';
 
 const TABS = {
   PROFILE: 'PROFILE',
@@ -6,21 +7,27 @@ const TABS = {
   ACHIEVEMENTS: 'ACHIEVEMENTS',
 };
 
+const SECTION_TO_TAB = { profile: 'PROFILE', security: 'SECURITY', achievements: 'ACHIEVEMENTS' };
+
 export default function Profile({
   apiBase,
   apiFetch,
   user,
+  initialSection = 'profile',
+  onGoHome,
   onUserUpdated,
   onGoPlay,
   onGoGames,
   onGoVerifyEmail,
   onLogout,
+  difficulty = 'novice',
+  onDifficultyChange,
 }) {
   const hasPassedScenario = useMemo(
     () => user.Progresses?.some((p) => p.status === 'passed') ?? false,
     [user.Progresses]
   );
-  const [tab, setTab] = useState(TABS.PROFILE);
+  const [tab, setTab] = useState(SECTION_TO_TAB[initialSection] || TABS.PROFILE);
   const [name, setName] = useState(user.name || '');
   const [login, setLogin] = useState(user.login || '');
   const [email, setEmail] = useState(user.email || '');
@@ -38,14 +45,19 @@ export default function Profile({
   const [avatarErr, setAvatarErr] = useState('');
 
   const achievements = useMemo(() => user.Achievements || [], [user]);
-  const gems = user.gems || 0;
+  const gems = Math.round(user.gems || 0);
+  const { musicEnabled, setMusicEnabled } = useMusic();
 
   useEffect(() => {
-    // синхронизируем поля при обновлении user
     setName(user.name || '');
     setLogin(user.login || '');
     setEmail(user.email || '');
   }, [user]);
+
+  useEffect(() => {
+    const t = SECTION_TO_TAB[initialSection] || TABS.PROFILE;
+    setTab(t);
+  }, [initialSection]);
 
   const saveProfile = async () => {
     setProfileMsg('');
@@ -61,7 +73,7 @@ export default function Profile({
         setProfileErr(data.message || 'Не удалось сохранить профиль');
         return;
       }
-      setProfileMsg(data.message || 'Профиль обновлён');
+      setProfileMsg('Сохранено успешно');
       await onUserUpdated();
     } catch {
       setProfileErr('Ошибка сохранения. Проверь backend.');
@@ -86,7 +98,7 @@ export default function Profile({
       }
       setCurrentPassword('');
       setNewPassword('');
-      setPassMsg('Пароль обновлён');
+      setPassMsg('Пароль успешно изменён');
     } catch {
       setPassErr('Ошибка смены пароля. Проверь backend.');
     } finally {
@@ -118,322 +130,302 @@ export default function Profile({
     }
   };
 
+  const sectionTitles = { [TABS.PROFILE]: 'Профиль', [TABS.SECURITY]: 'Безопасность', [TABS.ACHIEVEMENTS]: 'Достижения' };
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div className="status-bar">
-        <div className="status-left">
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <div className="avatar-circle" style={{ overflow: 'hidden' }}>
-              {user.avatarUrl ? (
-                <img
-                  src={user.avatarUrl}
-                  alt="avatar"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-              ) : (
-                '👤'
-              )}
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: '1.05rem' }}>{user.name}</div>
-              <div className="text-muted" style={{ fontSize: '0.85rem' }}>
-                @{user.login} • {user.email}
+    <div className="profile-page">
+      <header className="profile-header">
+        <div className="profile-header__inner">
+          {onGoHome ? (
+            <>
+              <button type="button" className="profile-header__back" onClick={onGoHome}>
+                ← На главную
+              </button>
+              <h1 className="profile-header__single-title">{sectionTitles[tab]}</h1>
+              <div style={{ width: 120 }} />
+            </>
+          ) : (
+            <>
+              <div className="profile-header__user">
+                <div className="profile-header__avatar" style={{ overflow: 'hidden' }} aria-hidden="true">
+                  {user.avatarUrl ? (
+                    <img src={user.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <span className="profile-header__avatar-inner">
+                      {(user.name || user.login || '?').charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <div className="profile-header__info">
+                  <span className="profile-header__name">{user.name}</span>
+                  <span className="profile-header__handle">@{user.login} • {user.email}</span>
+                </div>
               </div>
-            </div>
-          </div>
-        </div>
-        <div className="status-right" style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <button className="primary-btn" onClick={onGoPlay}>
-            Играть
-          </button>
-          {hasPassedScenario && onGoGames && (
-            <button className="primary-btn" onClick={onGoGames}>
-              Игры
-            </button>
+              <div className="profile-header__actions">
+                <button type="button" onClick={onGoPlay} className="btn btn--primary profile-header__btn">
+                  К карте
+                </button>
+                {hasPassedScenario && onGoGames && (
+                  <button type="button" onClick={onGoGames} className="btn btn--primary profile-header__btn">
+                    Мини-игра
+                  </button>
+                )}
+                <button type="button" onClick={onLogout} className="btn btn--outline profile-header__btn">
+                  Выйти
+                </button>
+              </div>
+            </>
           )}
-          <button className="secondary-btn" onClick={onLogout}>
-            Выйти
-          </button>
         </div>
-      </div>
+      </header>
 
-      {!user.isVerified && (
-        <div className="notice warn">
-          <div style={{ fontWeight: 700, marginBottom: 4 }}>Подтверди email</div>
-          <div className="text-muted" style={{ marginBottom: 10 }}>
-            Некоторые функции могут быть ограничены, пока почта не подтверждена. Нажми кнопку —
-            введёшь код из письма (или отправишь код повторно).
-          </div>
-          <button className="primary-btn" onClick={onGoVerifyEmail}>
-            Подтвердить email
-          </button>
-        </div>
-      )}
-
-      <div className="card" style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-        <div>
-          <h2 style={{ marginTop: 0, marginBottom: 6 }}>Личный кабинет</h2>
-          <div className="text-muted">
-            Управляй профилем, безопасностью и смотри витрину достижений.
-          </div>
-        </div>
-        <div className="tabs" role="tablist" aria-label="Profile tabs">
-          <button
-            className={`tab-btn ${tab === TABS.PROFILE ? 'active' : ''}`}
-            type="button"
-            onClick={() => setTab(TABS.PROFILE)}
-          >
-            Профиль
-          </button>
-          <button
-            className={`tab-btn ${tab === TABS.SECURITY ? 'active' : ''}`}
-            type="button"
-            onClick={() => setTab(TABS.SECURITY)}
-          >
-            Безопасность
-          </button>
-          <button
-            className={`tab-btn ${tab === TABS.ACHIEVEMENTS ? 'active' : ''}`}
-            type="button"
-            onClick={() => setTab(TABS.ACHIEVEMENTS)}
-          >
-            Достижения
-          </button>
-        </div>
-        <div className="chips-row" style={{ marginTop: 8 }}>
-          <span
-            className="chip"
-            style={{
-              maxWidth: 120,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            💎 {gems}
-          </span>
-        </div>
-      </div>
-
-      {tab === TABS.PROFILE && (
-        <>
-          <div className="card">
-            <h2 style={{ marginTop: 0, marginBottom: 10 }}>Профиль</h2>
-            <div className="text-muted" style={{ marginBottom: 14 }}>
-              Здесь можно менять имя, логин и почту.
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div>
-                <div className="text-muted" style={{ fontSize: '0.85rem', marginBottom: 6 }}>
-                  Имя
-                </div>
-                <input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    borderRadius: 12,
-                    border: '1px solid rgba(148,163,184,0.7)',
-                    background: 'rgba(15,23,42,0.9)',
-                    color: '#f9fafb',
-                  }}
-                />
+      <main className="profile-main">
+        <div className="container">
+          {!onGoHome && !user.isVerified && (
+            <div className="notice warn" style={{ marginBottom: 24 }}>
+              <div style={{ fontWeight: 700, marginBottom: 4 }}>Подтверди email</div>
+              <div className="text-muted" style={{ marginBottom: 10 }}>
+                Некоторые функции могут быть ограничены, пока почта не подтверждена.
               </div>
-              <div>
-                <div className="text-muted" style={{ fontSize: '0.85rem', marginBottom: 6 }}>
-                  Логин
-                </div>
-                <input
-                  value={login}
-                  onChange={(e) => setLogin(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    borderRadius: 12,
-                    border: '1px solid rgba(148,163,184,0.7)',
-                    background: 'rgba(15,23,42,0.9)',
-                    color: '#f9fafb',
-                  }}
-                />
-              </div>
-              <div>
-                <div className="text-muted" style={{ fontSize: '0.85rem', marginBottom: 6 }}>
-                  Почта
-                </div>
-                <input
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    borderRadius: 12,
-                    border: '1px solid rgba(148,163,184,0.7)',
-                    background: 'rgba(15,23,42,0.9)',
-                    color: '#f9fafb',
-                  }}
-                />
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 14 }}>
-              <button className="primary-btn" onClick={saveProfile} disabled={savingProfile}>
-                {savingProfile ? 'Сохраняем...' : 'Сохранить'}
+              <button type="button" className="btn btn--primary" onClick={onGoVerifyEmail}>
+                Подтвердить email
               </button>
             </div>
-
-            {profileMsg && (
-              <div className="text-success" style={{ marginTop: 10, fontSize: '0.85rem' }}>
-                {profileMsg}
-              </div>
-            )}
-            {profileErr && (
-              <div className="text-danger" style={{ marginTop: 10, fontSize: '0.85rem' }}>
-                {profileErr}
-              </div>
-            )}
-          </div>
-
-          <div className="card">
-            <h2 style={{ marginTop: 0, marginBottom: 10 }}>Аватар</h2>
-            <div className="text-muted" style={{ marginBottom: 10 }}>
-              PNG/JPG/WebP/GIF до 2MB.
-            </div>
-            <input
-              type="file"
-              accept="image/*"
-              disabled={uploading}
-              onChange={(e) => uploadAvatar(e.target.files?.[0])}
-            />
-            {avatarErr && (
-              <div className="text-danger" style={{ marginTop: 10, fontSize: '0.85rem' }}>
-                {avatarErr}
-              </div>
-            )}
-          </div>
-
-        </>
-      )}
-
-      {tab === TABS.SECURITY && (
-        <div className="card">
-          <h2 style={{ marginTop: 0, marginBottom: 10 }}>Безопасность</h2>
-          <div className="text-muted" style={{ marginBottom: 12 }}>
-            Смена пароля требует текущий пароль.
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <input
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              placeholder="Текущий пароль"
-              type="password"
-              style={{
-                padding: '10px 12px',
-                borderRadius: 12,
-                border: '1px solid rgba(148,163,184,0.7)',
-                background: 'rgba(15,23,42,0.9)',
-                color: '#f9fafb',
-              }}
-            />
-            <input
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Новый пароль"
-              type="password"
-              style={{
-                padding: '10px 12px',
-                borderRadius: 12,
-                border: '1px solid rgba(148,163,184,0.7)',
-                background: 'rgba(15,23,42,0.9)',
-                color: '#f9fafb',
-              }}
-            />
-          </div>
-
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 14 }}>
-            <button className="primary-btn" onClick={changePassword} disabled={savingPassword}>
-              {savingPassword ? 'Меняем...' : 'Сменить пароль'}
-            </button>
-          </div>
-
-          {passMsg && (
-            <div className="text-success" style={{ marginTop: 10, fontSize: '0.85rem' }}>
-              {passMsg}
-            </div>
           )}
-          {passErr && (
-            <div className="text-danger" style={{ marginTop: 10, fontSize: '0.85rem' }}>
-              {passErr}
-            </div>
-          )}
-        </div>
-      )}
 
-      {tab === TABS.ACHIEVEMENTS && (
-        <div className="card">
-          <h2 style={{ marginTop: 0, marginBottom: 10 }}>Витрина достижений</h2>
-          <div className="text-muted" style={{ marginBottom: 12 }}>
-            Здесь будут появляться ачивки за прохождение сценариев.
-          </div>
-
-          {achievements.length === 0 ? (
-            <div className="text-muted">
-              Пока достижений нет. Пройди сценарии, чтобы получить их.
-            </div>
-          ) : (
-            <div className="card-grid">
-              {achievements.map((a) => {
-                let icon = a.icon || '⭐';
-                if (a.code === 'bike_no_spend') {
-                  icon = '🚲';
-                }
-                if (a.code === 'smart_friend') {
-                  icon = '🎁';
-                }
-                if (a.code === 'quiz_master') {
-                  icon = '❓';
-                }
-
-                let description = a.description;
-                if (a.code === 'quiz_master') {
-                  const quizProgress = user.Progresses?.find(
-                    (p) => p.Scenario?.code === 'money_quiz'
-                  );
-                  const best = quizProgress?.bestResult ?? null;
-                  if (best != null) {
-                    description = `Лучший результат: ${best}%`;
-                  }
-                }
-                if (a.code === 'investment_champion') {
-                  const invProgress = user.Progresses?.find(
-                    (p) => p.Scenario?.code === 'investment_race'
-                  );
-                  const best = invProgress?.bestResult ?? null;
-                  if (best != null) {
-                    description = `Лучший баланс в конце игры: ${best} монет`;
-                  }
-                }
-                if (a.code === 'investment_champion') {
-                  icon = '📈';
-                }
-
-                return (
-                  <div key={a.id} className="card">
-                    <div style={{ fontSize: 28 }}>{icon}</div>
-                    <div style={{ fontWeight: 700, marginTop: 6 }}>{a.title}</div>
-                    <div className="text-muted" style={{ marginTop: 6 }}>
-                      {description}
-                    </div>
+          {!onGoHome && (
+            <section className="profile-section profile-section--cabinet">
+              <div className="profile-section__head" style={{ display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                <div>
+                  <h1 className="profile-section__title">Личный кабинет</h1>
+                  <p className="profile-section__subtitle">
+                    Управляй профилем, безопасностью и смотри витрину достижений.
+                  </p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                  <div className="profile-tabs">
+                    <button
+                      type="button"
+                      className={`profile-tabs__btn ${tab === TABS.PROFILE ? 'profile-tabs__btn--active' : ''}`}
+                      onClick={() => setTab(TABS.PROFILE)}
+                    >
+                      Профиль
+                    </button>
+                    <button
+                      type="button"
+                      className={`profile-tabs__btn ${tab === TABS.SECURITY ? 'profile-tabs__btn--active' : ''}`}
+                      onClick={() => setTab(TABS.SECURITY)}
+                    >
+                      Безопасность
+                    </button>
+                    <button
+                      type="button"
+                      className={`profile-tabs__btn ${tab === TABS.ACHIEVEMENTS ? 'profile-tabs__btn--active' : ''}`}
+                      onClick={() => setTab(TABS.ACHIEVEMENTS)}
+                    >
+                      Достижения
+                    </button>
                   </div>
-                );
-              })}
-            </div>
+                  <span className="chip">💎 {gems}</span>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {tab === TABS.PROFILE && (
+            <>
+              <section className="profile-section">
+                <h2 className="profile-section__title">Профиль</h2>
+                <p className="profile-section__subtitle">Здесь можно менять имя, логин и почту.</p>
+                <div className="profile-form">
+                  <div className="profile-form__row">
+                    <label className="profile-form__label">
+                      Имя
+                      <input
+                        type="text"
+                        className="profile-form__input"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                      />
+                    </label>
+                    <label className="profile-form__label">
+                      Логин
+                      <input
+                        type="text"
+                        className="profile-form__input"
+                        value={login}
+                        onChange={(e) => setLogin(e.target.value)}
+                      />
+                    </label>
+                  </div>
+                  <label className="profile-form__label">
+                    Почта
+                    <input
+                      type="email"
+                      className="profile-form__input"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
+                  </label>
+                  {onDifficultyChange && (
+                    <div className="profile-form__row">
+                      <label className="profile-form__label">
+                        Сложность игр
+                        <div className="profile-form__difficulty">
+                          <button
+                            type="button"
+                            className={`pill-option ${difficulty === 'novice' ? 'selected' : ''}`}
+                            onClick={() => onDifficultyChange('novice')}
+                          >
+                            Новичок
+                          </button>
+                          <button
+                            type="button"
+                            className={`pill-option ${difficulty === 'expert' ? 'selected' : ''}`}
+                            onClick={() => onDifficultyChange('expert')}
+                          >
+                            Знаток
+                          </button>
+                        </div>
+                      </label>
+                    </div>
+                  )}
+                  <div className="profile-form__row profile-form__music">
+                    <span className="profile-form__label profile-form__music-label">Музыка в сценариях и мини-игре</span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={musicEnabled}
+                      className={`music-toggle ${musicEnabled ? 'music-toggle--on' : ''}`}
+                      onClick={() => setMusicEnabled(!musicEnabled)}
+                      title={musicEnabled ? 'Выключить музыку' : 'Включить музыку'}
+                    >
+                      <span className="music-toggle__track">
+                        <span className="music-toggle__thumb" />
+                      </span>
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn--primary profile-form__save"
+                    onClick={saveProfile}
+                    disabled={savingProfile}
+                  >
+                    {savingProfile ? 'Сохраняем...' : 'Сохранить'}
+                  </button>
+                </div>
+                {profileMsg && <p className="text-success" style={{ marginTop: 12 }}>{profileMsg}</p>}
+                {profileErr && <p className="text-danger" style={{ marginTop: 12 }}>{profileErr}</p>}
+              </section>
+
+              <section className="profile-section">
+                <h2 className="profile-section__title">Аватар</h2>
+                <p className="profile-section__subtitle">PNG/JPG/WebP/GIF до 2MB.</p>
+                <label className="profile-avatar-upload">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={uploading}
+                    onChange={(e) => uploadAvatar(e.target.files?.[0])}
+                    className="profile-avatar-upload__input"
+                  />
+                  <span className="profile-avatar-upload__btn">
+                    {uploading ? 'Загрузка...' : 'Выбрать файл'}
+                  </span>
+                </label>
+                {avatarErr && <p className="text-danger" style={{ marginTop: 12 }}>{avatarErr}</p>}
+              </section>
+            </>
+          )}
+
+          {tab === TABS.SECURITY && (
+            <section className="profile-section">
+              <h2 className="profile-section__title">Безопасность</h2>
+              <p className="profile-section__subtitle">Смена пароля требует текущий пароль.</p>
+              <div className="profile-form">
+                <label className="profile-form__label">
+                  Текущий пароль
+                  <input
+                    type="password"
+                    className="profile-form__input"
+                    placeholder="Текущий пароль"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                  />
+                </label>
+                <label className="profile-form__label">
+                  Новый пароль
+                  <input
+                    type="password"
+                    className="profile-form__input"
+                    placeholder="Новый пароль"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="btn btn--primary profile-form__save"
+                  onClick={changePassword}
+                  disabled={savingPassword}
+                >
+                  {savingPassword ? 'Меняем...' : 'Сменить пароль'}
+                </button>
+              </div>
+              {passMsg && <p className="text-success" style={{ marginTop: 12 }}>{passMsg}</p>}
+              {passErr && <p className="text-danger" style={{ marginTop: 12 }}>{passErr}</p>}
+            </section>
+          )}
+
+          {tab === TABS.ACHIEVEMENTS && (
+            <section className="profile-section">
+              <h2 className="profile-section__title">Витрина достижений</h2>
+              <p className="profile-section__subtitle">
+                Здесь будут появляться ачивки за прохождение сценариев.
+              </p>
+              {achievements.length === 0 ? (
+                <p className="text-muted">Пока достижений нет. Пройди сценарии, чтобы получить их.</p>
+              ) : (
+                <div className="card-grid">
+                  {achievements.map((a) => {
+                    let icon = a.icon || '⭐';
+                    if (a.code === 'bike_no_spend') icon = '🚲';
+                    if (a.code === 'smart_friend') icon = '🎁';
+                    if (a.code === 'quiz_master') icon = '❓';
+                    if (a.code === 'investment_champion') icon = '📈';
+                    if (a.code === 'island_survivor') icon = '🏝️';
+                    if (a.code === 'island_100') icon = '🌟';
+
+                    let description = a.description;
+                    if (a.code === 'quiz_master') {
+                      const quizProgress = user.Progresses?.find((p) => p.Scenario?.code === 'money_quiz');
+                      const best = quizProgress?.bestResult ?? null;
+                      if (best != null) description = `Лучший результат: ${best}%`;
+                    }
+                    if (a.code === 'investment_champion') {
+                      const invProgress = user.Progresses?.find((p) => p.Scenario?.code === 'investment_race');
+                      const best = invProgress?.bestResult ?? null;
+                      if (best != null) description = `Лучший баланс в конце игры: ${best} руб.`;
+                    }
+                    if (a.code === 'island_survivor') {
+                      const bestDays = user.islandBestDays ?? 0;
+                      description = bestDays > 0 ? `Рекорд: ${bestDays} дней` : a.description;
+                    }
+
+                    return (
+                      <div key={a.id} className="card">
+                        <div style={{ fontSize: 28 }}>{icon}</div>
+                        <div style={{ fontWeight: 700, marginTop: 6 }}>{a.title}</div>
+                        <div className="text-muted" style={{ marginTop: 6 }}>{description}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
           )}
         </div>
-      )}
+      </main>
     </div>
   );
 }
-
