@@ -818,9 +818,10 @@ a:hover {
   position: fixed;
   right: 24px;
   bottom: 80px;
-  width: 380px;
+  width: 420px;
   max-width: calc(100vw - 32px);
-  max-height: 420px;
+  max-height: 75vh;
+  min-height: 520px;
   z-index: 50;
   display: flex;
   flex-direction: column;
@@ -873,8 +874,8 @@ a:hover {
   flex: 1;
   overflow-y: auto;
   padding: 12px;
-  min-height: 180px;
-  max-height: 280px;
+  min-height: 280px;
+  max-height: min(480px, 55vh);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -968,10 +969,11 @@ a:hover {
     left: 12px;
     width: auto;
     bottom: 72px;
-    max-height: 60vh;
+    max-height: 85vh;
+    min-height: 400px;
   }
   .ai-chat-panel__messages {
-    max-height: 220px;
+    max-height: min(400px, 60vh);
   }
 }
 
@@ -1681,6 +1683,40 @@ a:hover {
 .profile-avatar-upload__input:disabled + .profile-avatar-upload__btn {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+.profile-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.profile-avatar-preview {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--color-gray-200);
+  border: 2px solid var(--color-green);
+  flex-shrink: 0;
+}
+
+.profile-avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-avatar-preview__letter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-green-dark);
 }
 
 .notice {
@@ -2490,6 +2526,53 @@ a:hover {
 
 .island-game-back { flex-shrink: 0; }
 
+.island-game-header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.island-game-header-desk-only { display: flex; }
+.island-game-header-mobile-only { display: none; }
+
+.island-game-menu-wrap { position: relative; }
+.island-game-menu-btn { min-height: 40px; }
+.island-game-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: transparent;
+}
+.island-game-menu-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  z-index: 95;
+  min-width: 220px;
+  background: var(--color-white);
+  border: 2px solid var(--color-green);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: 8px 0;
+  display: flex;
+  flex-direction: column;
+}
+.island-game-menu-item {
+  display: block;
+  width: 100%;
+  padding: 12px 16px;
+  text-align: left;
+  border: none;
+  background: none;
+  font-size: 0.95rem;
+  cursor: pointer;
+  color: var(--color-gray-900);
+  transition: background 0.1s;
+}
+.island-game-menu-item:hover {
+  background: var(--color-gray-100);
+}
+
+.island-game-mobile-panel {
+  display: none;
+}
+
 .island-game-resources { display: flex; gap: 20px; font-size: 1rem; font-variant-numeric: tabular-nums; }
 .island-game-resources span { white-space: nowrap; }
 .island-game-day { font-weight: 700; font-size: 1rem; }
@@ -2863,7 +2946,6 @@ a:hover {
   font-size: 0.9rem;
   color: var(--color-gray-700);
 }
-.island-game-zone-row-file { font-size: 0.85rem; }
 .island-game-zone-row-textarea {
   width: 100%;
   padding: 8px 10px;
@@ -3514,61 +3596,146 @@ a:hover {
     min-height: auto;
   }
 
-  /* Остров сокровищ: колонки в столбик */
+  /* Остров сокровищ: мобильный layout — только карта + меню + кнопка «Следующий день» */
   .island-game-header {
     padding: 10px 12px;
     flex-wrap: wrap;
     gap: 8px;
   }
 
+  .island-game-header-desk-only {
+    display: none !important;
+  }
+
+  .island-game-header-mobile-only {
+    display: block !important;
+  }
+
+  .island-game-resources {
+    gap: 10px;
+    font-size: 0.9rem;
+  }
+
   .island-game-main {
     grid-template-columns: 1fr;
-    grid-template-rows: auto minmax(260px, 1fr) auto;
-    gap: 12px;
-    padding: 12px;
-    overflow: auto;
+    grid-template-rows: 1fr;
+    gap: 0;
+    padding: 10px;
+    overflow: hidden;
     -webkit-overflow-scrolling: touch;
   }
 
-  .island-game-main > .island-game-settlers {
-    order: 1;
-    max-height: 180px;
+  .island-game-main > .island-game-settlers.island-game-desk-only,
+  .island-game-main > .island-game-buildings.island-game-desk-only {
+    display: none !important;
   }
 
   .island-game-main > .island-game-map {
-    order: 2;
-    min-height: 260px;
-  }
-
-  .island-game-main > .island-game-buildings {
-    order: 3;
-    max-height: 200px;
+    order: 0;
+    min-height: 0;
+    flex: 1 1 0;
   }
 
   .island-game-map-inner {
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto auto auto;
-    grid-template-areas: 'camp camp' 'food wood' 'stone market' 'market market';
-    gap: 10px;
-    padding: 10px;
+    grid-template-rows: 1fr 1fr auto;
+    grid-template-areas: 'camp food' 'wood stone' 'market market';
+    gap: 8px;
+    padding: 8px;
+    min-height: 280px;
   }
 
   .island-game-zone {
-    min-height: 70px;
-    padding: 12px;
+    min-height: 64px;
+    padding: 10px;
+    font-size: 0.8rem;
+  }
+
+  .island-game-zone-title {
     font-size: 0.85rem;
   }
 
   .island-game-settler-avatar {
-    width: 38px;
-    height: 38px;
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+
+  .island-game-placed-building {
     font-size: 1.2rem;
   }
 
   .island-game-footer {
-    padding: 10px 12px;
+    padding: 12px;
     flex-wrap: wrap;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .island-game-footer-reset.island-game-desk-only {
+    display: none !important;
+  }
+
+  .island-game-next-day-btn {
+    flex: 1;
+    min-width: 200px;
+    min-height: 48px;
+    font-size: 1.05rem;
+  }
+
+  .island-game-footer-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
     gap: 8px;
+    width: 100%;
+  }
+
+  /* Мобильные панели (Магазин / Логи из меню) */
+  .island-game-mobile-panel {
+    display: flex !important;
+    flex-direction: column;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-height: 55vh;
+    background: var(--color-white);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15);
+    z-index: 100;
+    overflow: hidden;
+  }
+
+  .island-game-mobile-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--color-gray-200);
+    flex-shrink: 0;
+    background: var(--color-bg);
+  }
+
+  .island-game-mobile-panel-title {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  .island-game-mobile-panel-close {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .island-game-mobile-panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .island-game-mobile-shop .island-game-building-card {
+    margin-bottom: 12px;
   }
 
   .island-game-modal-backdrop {

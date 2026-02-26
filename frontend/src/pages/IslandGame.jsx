@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 // Производство за 1 поселенца в день (рынок даёт ракушки)
 const PRODUCTION = { food: 4, wood: 3, stone: 2, market: 2 };
@@ -323,130 +323,14 @@ const ZONE_LABELS = {
   market: '🐚 Рынок',
 };
 
-function ZonesConfigModal({ zonesConfig, apiBase, apiFetch, onClose, onSaved }) {
-  const zones = zonesConfig.zones || {};
-  const [savingZone, setSavingZone] = useState(null);
-  const [error, setError] = useState(null);
-
-  const handleSaveZone = async (zoneId, file, instruction) => {
-    setError(null);
-    setSavingZone(zoneId);
-    try {
-      if (file) {
-        const form = new FormData();
-        form.append('zoneId', zoneId);
-        form.append('image', file);
-        form.append('instruction', typeof instruction === 'string' ? instruction : (zones[zoneId]?.instruction || ''));
-        const res = await apiFetch(`${apiBase}/island-game/zones/upload`, {
-          method: 'POST',
-          body: form,
-        });
-        const data = await res.json().catch(() => ({}));
-        if (res.ok && data.zones) {
-          onSaved(data.zones);
-        } else {
-          setError(data.message || 'Ошибка загрузки');
-        }
-      } else {
-        const res = await apiFetch(`${apiBase}/island-game/zones`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ zoneId, instruction: typeof instruction === 'string' ? instruction : (zones[zoneId]?.instruction || '') }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (res.ok && data.zones) {
-          onSaved(data.zones);
-        } else {
-          setError(data.message || 'Ошибка сохранения');
-        }
-      }
-    } catch {
-      setError('Ошибка сети');
-    } finally {
-      setSavingZone(null);
-    }
-  };
-
-  return (
-    <div className="island-game-modal-backdrop" onClick={onClose}>
-      <div className="island-game-modal island-game-zones-modal" onClick={(e) => e.stopPropagation()}>
-        <h3>Картинки и инструкции зон</h3>
-        <p className="text-muted" style={{ fontSize: '0.9rem', marginBottom: 16 }}>
-          Для каждой зоны можно загрузить своё изображение и краткую инструкцию (подсказку). Они будут видны на карте.
-        </p>
-        {error && <div className="island-game-zones-error">{error}</div>}
-        <div className="island-game-zones-form-list">
-          {ZONE_IDS.map((zoneId) => {
-            const cfg = zones[zoneId] || { imageUrl: '', instruction: '' };
-            return (
-              <ZoneRow
-                key={zoneId}
-                zoneId={zoneId}
-                label={ZONE_LABELS[zoneId]}
-                imageUrl={cfg.imageUrl}
-                instruction={cfg.instruction}
-                apiBase={apiBase}
-                saving={savingZone === zoneId}
-                onSave={handleSaveZone}
-              />
-            );
-          })}
-        </div>
-        <button type="button" className="primary-btn" onClick={onClose}>Закрыть</button>
-      </div>
-    </div>
-  );
-}
-
-function ZoneRow({ zoneId, label, imageUrl, instruction, apiBase, saving, onSave }) {
-  const [instructionVal, setInstructionVal] = useState(instruction || '');
-  const fileInputRef = React.useRef(null);
-
-  React.useEffect(() => {
-    setInstructionVal(instruction || '');
-  }, [instruction]);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const file = fileInputRef.current?.files?.[0];
-    onSave(zoneId, file || null, instructionVal);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  const imgSrc = imageUrl && (imageUrl.startsWith('http') ? imageUrl : imageUrl);
-
-  return (
-    <form className="island-game-zone-row" onSubmit={handleSubmit}>
-      <div className="island-game-zone-row-header">{label}</div>
-      <div className="island-game-zone-row-preview">
-        {imgSrc ? (
-          <img src={imgSrc} alt="" className="island-game-zone-row-img" />
-        ) : (
-          <div className="island-game-zone-row-placeholder">Нет картинки</div>
-        )}
-      </div>
-      <div className="island-game-zone-row-fields">
-        <label className="island-game-zone-row-label">
-          Новая картинка (JPG, PNG до 5 МБ):
-          <input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png,.webp,.gif" className="island-game-zone-row-file" />
-        </label>
-        <label className="island-game-zone-row-label">
-          Инструкция / подсказка для зоны:
-          <textarea
-            className="island-game-zone-row-textarea"
-            value={instructionVal}
-            onChange={(e) => setInstructionVal(e.target.value)}
-            placeholder="Например: Сюда ставят поселенцев для добычи еды"
-            rows={2}
-          />
-        </label>
-        <button type="submit" className="primary-btn island-game-zone-row-save" disabled={saving}>
-          {saving ? 'Сохранение…' : 'Сохранить'}
-        </button>
-      </div>
-    </form>
-  );
-}
+// Статичные картинки зон из проекта (файлы в public/island-zones/) — игроки не настраивают фоны
+const ZONE_STATIC_IMAGES = {
+  camp: '/island-zones/camp.jpg',
+  food: '/island-zones/food.jpg',
+  wood: '/island-zones/wood.jpg',
+  stone: '/island-zones/stone.jpg',
+  market: '/island-zones/market.jpg',
+};
 
 export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack, onUserUpdated }) {
   const [loading, setLoading] = useState(true);
@@ -459,8 +343,8 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
   const [tip, setTip] = useState(null);
   const [lastEventMessage, setLastEventMessage] = useState(null);
   const [dragOverZone, setDragOverZone] = useState(null);
-  const [zonesConfig, setZonesConfig] = useState({ zones: {} });
-  const [zonesModalOpen, setZonesModalOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobilePanel, setMobilePanel] = useState(null); // 'shop' | 'log' | null
   const [confirmReset, setConfirmReset] = useState(false);
   const [warehouseModalOpen, setWarehouseModalOpen] = useState(false);
   const [rulesModalOpen, setRulesModalOpen] = useState(false);
@@ -502,17 +386,6 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
   useEffect(() => {
     loadGame();
   }, [loadGame]);
-
-  useEffect(() => {
-    let alive = true;
-    fetch(`${apiBase}/island-game/zones`)
-      .then((res) => res.ok ? res.json() : null)
-      .then((data) => {
-        if (alive && data && data.zones) setZonesConfig(data);
-      })
-      .catch(() => {});
-    return () => { alive = false; };
-  }, [apiBase]);
 
   useEffect(() => {
     return () => {
@@ -804,6 +677,66 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
     setDragOverZone(null);
   }, []);
 
+  const [touchDrag, setTouchDrag] = useState(null);
+  const touchIdRef = useRef(null);
+
+  const resolveZoneFromPoint = useCallback((clientX, clientY) => {
+    const el = document.elementFromPoint(clientX, clientY);
+    let node = el;
+    while (node && !node.dataset?.islandZone) node = node.parentElement;
+    if (!node || !node.dataset.islandZone) return null;
+    const zoneId = node.dataset.islandZone;
+    const rect = node.getBoundingClientRect();
+    const x = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100));
+    return { zoneId, x, y };
+  }, []);
+
+  useEffect(() => {
+    if (!touchDrag) return;
+    const onMove = (e) => {
+      if (e.touches[0]?.identifier === touchIdRef.current) e.preventDefault();
+    };
+    const onEnd = (e) => {
+      const t = Array.from(e.changedTouches || []).find((x) => x.identifier === touchIdRef.current);
+      if (!t) return;
+      const zone = resolveZoneFromPoint(t.clientX, t.clientY);
+      if (zone) {
+        if (touchDrag.type === 'settler') {
+          const settlerId = parseInt(touchDrag.id, 10);
+          if (!Number.isNaN(settlerId)) moveSettler(settlerId, zone.zoneId, zone.x, zone.y);
+        }
+        if (touchDrag.type === 'building' && zone.zoneId === 'camp') {
+          placeBuilding(touchDrag.id, zone.zoneId, zone.x, zone.y);
+        }
+      }
+      setTouchDrag(null);
+      touchIdRef.current = null;
+      document.removeEventListener('touchmove', onMove, { passive: false });
+      document.removeEventListener('touchend', onEnd);
+      document.removeEventListener('touchcancel', onEnd);
+    };
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', onEnd);
+    document.addEventListener('touchcancel', onEnd);
+    return () => {
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onEnd);
+      document.removeEventListener('touchcancel', onEnd);
+    };
+  }, [touchDrag, resolveZoneFromPoint, moveSettler, placeBuilding]);
+
+  const settlerTouchStart = useCallback((e, settlerId) => {
+    if (e.touches.length !== 1) return;
+    touchIdRef.current = e.touches[0].identifier;
+    setTouchDrag({ type: 'settler', id: settlerId });
+  }, []);
+  const buildingTouchStart = useCallback((e, buildingId) => {
+    if (e.touches.length !== 1) return;
+    touchIdRef.current = e.touches[0].identifier;
+    setTouchDrag({ type: 'building', id: buildingId });
+  }, []);
+
   const build = useCallback((buildingId) => {
     if (!game) return;
     const b = BUILDINGS.find((x) => x.id === buildingId);
@@ -985,6 +918,7 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
         e.dataTransfer.effectAllowed = 'move';
       }}
       onDragEnd={handleDragEnd}
+      onTouchStart={(e) => settlerTouchStart(e, s.id)}
       title="Перетащи на зону работы"
     >
       {settlerAvatarContent}
@@ -1000,7 +934,10 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
   const buildingsInZone = (zoneId) =>
     BUILDINGS.filter((b) => game.buildings[b.id] === 2 && getPlacementZone(placement[b.id]) === zoneId);
 
-  const getZoneConfig = (zoneId) => zonesConfig.zones[zoneId] || { imageUrl: '', instruction: '' };
+  const getZoneConfig = (zoneId) => ({
+    imageUrl: ZONE_STATIC_IMAGES[zoneId] || '',
+    instruction: '',
+  });
 
   const renderZone = (zoneId, title, emoji) => {
     const here = settlers.filter((s) => s.job === zoneId);
@@ -1019,6 +956,7 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
       <div
         className={`island-game-zone island-game-drop-zone ${dragOverZone === zoneId ? 'drag-over' : ''}`}
         style={zoneStyle}
+        data-island-zone={zoneId}
         onDragOver={(e) => handleDragOver(zoneId, e)}
         onDragLeave={handleDragLeave}
         onDrop={(e) => handleDrop(zoneId, e)}
@@ -1055,6 +993,7 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
                 ev.dataTransfer.effectAllowed = 'move';
               }}
               onDragEnd={handleDragEnd}
+              onTouchStart={(e) => settlerTouchStart(e, s.id)}
               title="Перетащи в другое место"
             >
               {settlerAvatarContent}
@@ -1068,33 +1007,69 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
     );
   };
 
+  const openMenuAnd = (fn) => {
+    setMobileMenuOpen(false);
+    if (fn) fn();
+  };
+
   return (
     <div className="island-game-shell">
       <header className="island-game-header">
-        <button type="button" className="secondary-btn island-game-back" onClick={onBack}>
+        <button type="button" className="secondary-btn island-game-back island-game-header-desk-only" onClick={onBack}>
           ← Назад
         </button>
         <div className="island-game-resources">
           <span title="Еда">🍎 {res.food ?? 0}</span>
           <span title="Дерево">🪵 {res.wood ?? 0}</span>
           <span title="Камень">🪨 {res.stone ?? 0}</span>
-          <span title="Ракушки (монеты)">🐚 {res.coins ?? 0}</span>
+          <span title="Ракушки">🐚 {res.coins ?? 0}</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="island-game-header-right">
           <div className="island-game-day">
             День {game.dayCount}
           </div>
-          <button type="button" className="secondary-btn island-game-rules-btn" onClick={() => setRulesModalOpen(true)} title="Правила игры">
+          <button type="button" className="secondary-btn island-game-rules-btn island-game-header-desk-only" onClick={() => setRulesModalOpen(true)} title="Правила игры">
             ?
           </button>
-          <button type="button" className="secondary-btn island-game-zones-btn" onClick={() => setZonesModalOpen(true)} title="Картинки и инструкции зон">
-            🖼 Зоны
-          </button>
+          <div className="island-game-menu-wrap island-game-header-mobile-only">
+            <button
+              type="button"
+              className="secondary-btn island-game-menu-btn"
+              onClick={() => setMobileMenuOpen((v) => !v)}
+              aria-expanded={mobileMenuOpen}
+              aria-haspopup="true"
+              title="Меню"
+            >
+              ☰ Меню
+            </button>
+            {mobileMenuOpen && (
+              <>
+                <div className="island-game-menu-backdrop" onClick={() => setMobileMenuOpen(false)} aria-hidden="true" />
+                <div className="island-game-menu-dropdown" role="menu">
+                  <button type="button" className="island-game-menu-item" role="menuitem" onClick={() => openMenuAnd(() => setMobilePanel('shop'))}>
+                    🏪 Магазин построек
+                  </button>
+                  <button type="button" className="island-game-menu-item" role="menuitem" onClick={() => openMenuAnd(() => setMobilePanel('log'))}>
+                    📋 Системные сообщения
+                  </button>
+                  <button type="button" className="island-game-menu-item" role="menuitem" onClick={() => openMenuAnd(resetProgress)}>
+                    🔄 Сбросить прогресс
+                  </button>
+                  <button type="button" className="island-game-menu-item" role="menuitem" onClick={() => openMenuAnd(onBack)}>
+                    ← Назад
+                  </button>
+                  <button type="button" className="island-game-menu-item" role="menuitem" onClick={() => openMenuAnd(() => setRulesModalOpen(true))}>
+                    ? Правила
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
       <main className="island-game-main">
-        <aside className="island-game-settlers island-game-settlers--messages-only">
+        <aside className="island-game-settlers island-game-settlers--messages-only island-game-desk-only">
           <div className="island-game-event-log">
             <div className="island-game-event-log-title">Системные сообщения</div>
             <div className="island-game-event-log-list">
@@ -1115,6 +1090,7 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
           <div className="island-game-map-inner">
             <div
               className={`island-game-zone island-game-drop-zone island-game-camp ${dragOverZone === 'camp' ? 'drag-over' : ''}`}
+              data-island-zone="camp"
               style={(() => {
                 const c = getZoneConfig('camp');
                 const s = { gridArea: 'camp' };
@@ -1161,6 +1137,7 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
                       ev.dataTransfer.effectAllowed = 'move';
                     }}
                     onDragEnd={handleDragEnd}
+                    onTouchStart={(e) => settlerTouchStart(e, s.id)}
                     title="Перетащи в другое место"
                   >
                     {settlerAvatarContent}
@@ -1178,7 +1155,7 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
           </div>
         </section>
 
-        <aside className="island-game-buildings">
+        <aside className="island-game-buildings island-game-desk-only">
           <div className="island-game-buildings-title">Магазин построек</div>
           {BUILDINGS.map((b) => {
             const status = game.buildings[b.id];
@@ -1222,6 +1199,7 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
                       e.dataTransfer.effectAllowed = 'move';
                     }}
                     onDragEnd={handleDragEnd}
+                    onTouchStart={(e) => buildingTouchStart(e, b.id)}
                     title="Перетащи на карту в зону Лагеря"
                   >
                     <span className="island-game-building-drag-emoji" aria-hidden>{b.emoji}</span>
@@ -1244,11 +1222,108 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
         </aside>
       </main>
 
+      {/* Мобильные панели: Магазин и Логи из меню */}
+      {mobilePanel === 'shop' && (
+        <div className="island-game-mobile-panel island-game-mobile-shop">
+          <div className="island-game-mobile-panel-header">
+            <h3 className="island-game-mobile-panel-title">🏪 Магазин построек</h3>
+            <button type="button" className="secondary-btn island-game-mobile-panel-close" onClick={() => setMobilePanel(null)} aria-label="Закрыть">
+              ✕
+            </button>
+          </div>
+          <div className="island-game-mobile-panel-body">
+            {BUILDINGS.map((b) => {
+              const status = game.buildings[b.id];
+              const owned = status === 1 || status === 2;
+              const placed = status === 2;
+              const canBuild = !owned && canAffordWithWarehouse(game.resources, game.warehouse, b.cost);
+              return (
+                <div key={b.id} className="island-game-building-card">
+                  <div><strong>{b.name}</strong> {placed ? '✓ на карте' : owned ? '(куплено)' : ''}</div>
+                  <div className="text-muted" style={{ fontSize: '0.85rem' }}>{b.desc}</div>
+                  {!owned && (
+                    <div style={{ fontSize: '0.8rem', marginTop: 4 }}>
+                      {Object.entries(b.cost).map(([k, v]) => (
+                        <span key={k} style={{ marginRight: 8 }}>
+                          {k === 'wood' && '🪵'}
+                          {k === 'stone' && '🪨'}
+                          {k === 'coins' && '🐚'}
+                          {v}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {!owned && (
+                    <button
+                      type="button"
+                      className="primary-btn"
+                      style={{ marginTop: 6 }}
+                      disabled={!canBuild}
+                      onClick={() => build(b.id)}
+                    >
+                      Купить
+                    </button>
+                  )}
+                  {status === 1 && (
+                    <div
+                      className="island-game-building-drag-icon"
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('application/island-game-type', 'building');
+                        e.dataTransfer.setData('application/island-game-id', b.id);
+                        e.dataTransfer.effectAllowed = 'move';
+                      }}
+                      onDragEnd={handleDragEnd}
+                      onTouchStart={(e) => buildingTouchStart(e, b.id)}
+                      title="Перетащи на карту в зону Лагеря"
+                    >
+                      <span className="island-game-building-drag-emoji" aria-hidden>{b.emoji}</span>
+                      <span className="island-game-building-drag-label">Перетащи на карту</span>
+                    </div>
+                  )}
+                  {b.id === 'warehouse' && status === 2 && (
+                    <button type="button" className="primary-btn" style={{ marginTop: 8 }} onClick={() => { setWarehouseModalOpen(true); setMobilePanel(null); }}>
+                      Открыть склад
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+            {game.debt && (
+              <div className="notice warn" style={{ marginTop: 12 }}>
+                Долг: {game.debt.amount} {game.debt.resource} к дню {game.debt.dueDay}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      {mobilePanel === 'log' && (
+        <div className="island-game-mobile-panel island-game-mobile-log">
+          <div className="island-game-mobile-panel-header">
+            <h3 className="island-game-mobile-panel-title">📋 Системные сообщения</h3>
+            <button type="button" className="secondary-btn island-game-mobile-panel-close" onClick={() => setMobilePanel(null)} aria-label="Закрыть">
+              ✕
+            </button>
+          </div>
+          <div className="island-game-event-log-list island-game-mobile-panel-body">
+            {(game.eventLog || []).slice(-20).reverse().map((entry, idx) => (
+              <div key={idx} className="island-game-event-log-entry">
+                <span className="island-game-event-log-day">День {entry.day}</span>
+                <span className="island-game-event-log-msg">{entry.message}</span>
+              </div>
+            ))}
+            {(game.eventLog || []).length === 0 && (
+              <div className="text-muted" style={{ fontSize: '0.8rem' }}>Пока нет записей.</div>
+            )}
+          </div>
+        </div>
+      )}
+
       <footer className="island-game-footer">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <div className="island-game-footer-actions">
           {phase === 'assign' && (
-            <button type="button" className="primary-btn" onClick={endDay}>
-              Завершить день
+            <button type="button" className="primary-btn island-game-next-day-btn" onClick={endDay}>
+              Следующий день
             </button>
           )}
           {lastEventMessage && (
@@ -1257,7 +1332,7 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
         </div>
         <button
           type="button"
-          className="secondary-btn"
+          className="secondary-btn island-game-footer-reset island-game-desk-only"
           style={{ fontSize: '0.85rem' }}
           onClick={resetProgress}
         >
@@ -1314,16 +1389,6 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
             <button type="button" className="primary-btn" onClick={() => setRulesModalOpen(false)}>Закрыть</button>
           </div>
         </div>
-      )}
-
-      {zonesModalOpen && (
-        <ZonesConfigModal
-          zonesConfig={zonesConfig}
-          apiBase={apiBase}
-          apiFetch={apiFetch}
-          onClose={() => setZonesModalOpen(false)}
-          onSaved={(zones) => setZonesConfig({ zones })}
-        />
       )}
 
       {warehouseModalOpen && game?.buildings?.warehouse === 2 && (

@@ -320,19 +320,30 @@ export default function Profile({
 
               <section className="profile-section">
                 <h2 className="profile-section__title">Аватар</h2>
-                <p className="profile-section__subtitle">PNG/JPG/WebP/GIF до 2MB.</p>
-                <label className="profile-avatar-upload">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    disabled={uploading}
-                    onChange={(e) => uploadAvatar(e.target.files?.[0])}
-                    className="profile-avatar-upload__input"
-                  />
-                  <span className="profile-avatar-upload__btn">
-                    {uploading ? 'Загрузка...' : 'Выбрать файл'}
-                  </span>
-                </label>
+                <p className="profile-section__subtitle">Текущий аватар отображается слева. PNG/JPG/WebP/GIF до 2MB.</p>
+                <div className="profile-avatar-row">
+                  <div className="profile-avatar-preview" title="Текущий аватар">
+                    {user.avatarUrl ? (
+                      <img src={user.avatarUrl} alt="" />
+                    ) : (
+                      <span className="profile-avatar-preview__letter">
+                        {(user.name || user.login || '?').charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <label className="profile-avatar-upload">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={uploading}
+                      onChange={(e) => uploadAvatar(e.target.files?.[0])}
+                      className="profile-avatar-upload__input"
+                    />
+                    <span className="profile-avatar-upload__btn">
+                      {uploading ? 'Загрузка...' : 'Выбрать файл'}
+                    </span>
+                  </label>
+                </div>
                 {avatarErr && <p className="text-danger" style={{ marginTop: 12 }}>{avatarErr}</p>}
               </section>
             </>

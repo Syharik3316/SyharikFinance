@@ -210,6 +210,46 @@ const BUSINESS_RANDOM_EVENTS = [
       { label: 'Распродать холодный по скидке', delta: 55, popularityDelta: -2, comment: 'Часть продал. Остальное пришлось вылить.', hint: 'Распродажа лучше потерь.', outro: 'Частичная выручка лучше нуля.' },
     ],
   },
+  {
+    title: 'День рождения парка',
+    text: 'В парке празднуют день рождения — бесплатные концерты, много гостей. Идеальный день для продаж.',
+    choices: [
+      { label: 'Закупить двойную партию и работать без перерыва', delta: -90, popularityDelta: 12, comment: 'Продал почти всё. Выручка +340. Отличный день!', hint: 'Праздники увеличивают спрос.', outro: 'Умение предвидеть события помогает планировать закупки.' },
+      { label: 'Работать как обычно', delta: 150, popularityDelta: 5, comment: 'Хорошая выручка. Стабильно.', hint: 'Риск и стабильность.', outro: 'Консервативная стратегия тоже имеет право на жизнь.' },
+    ],
+  },
+  {
+    title: 'Соседка просит в долг',
+    text: 'Знакомая соседка просит одолжить 100 руб. до завтра. Она часто покупает у тебя лимонад.',
+    choices: [
+      { label: 'Одолжить 100 руб.', delta: -100, popularityDelta: 8, comment: 'Она вернула на следующий день и рассказала друзьям. Репутация выросла.', hint: 'Доверие и отношения.', outro: 'Деньги в долг — риск: давай только если готов к потере.' },
+      { label: 'Вежливо отказать', delta: 0, popularityDelta: 0, comment: 'Она поняла. Продолжает заходить как клиент.', hint: 'Границы в финансах важны.', outro: 'Уметь говорить «нет» — часть финансовой грамотности.' },
+    ],
+  },
+  {
+    title: 'Спонсорская наклейка',
+    text: 'Производитель стаканов предлагает: бесплатные стаканы с их логотипом в обмен на рекламу на стойке.',
+    choices: [
+      { label: 'Согласиться — экономим на стаканах', delta: 50, popularityDelta: 6, comment: 'Экономия на закупках. Стаканы пришли вовремя.', hint: 'Партнёрства снижают расходы.', outro: 'Сотрудничество с брендами может снизить себестоимость.' },
+      { label: 'Отказаться — свой стиль важнее', delta: 0, popularityDelta: 4, comment: 'Остаёшься при своих. Свой имидж сохранил.', hint: 'Имидж и независимость.', outro: 'Выбор между экономией и имиджем.' },
+    ],
+  },
+  {
+    title: 'Турнир по футболу',
+    text: 'На поле рядом с парком турнир. Болельщики и игроки мечтают о холодном лимонаде.',
+    choices: [
+      { label: 'Подойти ближе к полю с лотком (доп. закупка 70)', delta: -70, popularityDelta: 18, comment: 'Продал в два раза больше обычного. Выручка +260.', hint: 'Близость к клиенту.', outro: 'Понимание, где твой клиент, увеличивает продажи.' },
+      { label: 'Остаться на месте', delta: 120, popularityDelta: 6, comment: 'Часть болельщиков зашла в парк. Неплохо.', hint: 'Пассивный спрос.', outro: 'Расположение точки влияет на выручку.' },
+    ],
+  },
+  {
+    title: 'Купон на скидку',
+    text: 'Ты напечатал купоны «10% скидка» и раздал в соцсетях. Сегодня пришли новые клиенты с купонами.',
+    choices: [
+      { label: 'Принять купоны — скидка 10%', delta: 180, popularityDelta: 16, comment: 'Много новых лиц. Выручка выросла, репутация тоже.', hint: 'Акции привлекают новых.', outro: 'Небольшая скидка может принести больше выручки за счёт объёма.' },
+      { label: 'Отказать — купоны не принимаю', delta: 40, popularityDelta: -8, comment: 'Кто-то ушёл недовольный. Репутация пострадала.', hint: 'Обещания нужно выполнять.', outro: 'Если объявил акцию — её нужно провести.' },
+    ],
+  },
 ];
 
 // Новый сюжет: дни 16–30 (10 сюжетных + 5 слотов под рандом)
@@ -288,8 +328,8 @@ const DAYS_PLOT_16_30 = [
   },
   {
     day: 24,
-    title: 'Предпоследний день',
-    text: 'Завтра закрытие сезона. Сегодня последний полный день продаж.',
+    title: 'Финальная пятница',
+    text: 'Пятница перед последними выходными сезона. Сегодня последний полный день продаж в будни.',
     choices: [
       { label: 'Распродать всё по скидке — очистить запасы', delta: 180, popularityDelta: 10, comment: 'Остатки распроданы. Ничего не пропало.', hint: 'Управление остатками.', outro: 'Распродажа в конце — норма практики.' },
       { label: 'Продавать по обычной цене', delta: 150, popularityDelta: 2, comment: 'Часть остатков завтра придётся вылить.', hint: 'Остатки и потери.', outro: 'Баланс между ценой и потерями.' },
@@ -297,8 +337,8 @@ const DAYS_PLOT_16_30 = [
   },
   {
     day: 25,
-    title: 'Предпоследний день',
-    text: 'Завтра последний день. Сегодня ещё можно заработать и распродать остатки.',
+    title: 'Суббота перед финишем',
+    text: 'Завтра последний день сезона. Сегодня ещё можно заработать и распродать остатки.',
     choices: [
       { label: 'Акция "Всё по полцены" на остатки', delta: 160, popularityDelta: 8, comment: 'Очередь до вечера. Остатки распроданы.', hint: 'Финал сезона.', outro: 'Распродажа остатков — норма практики.' },
       { label: 'Продавать как обычно', delta: 130, popularityDelta: 2, comment: 'Стабильный день.', hint: 'Предсказуемость.', outro: 'Баланс цены и потерь.' },
@@ -332,11 +372,12 @@ const DAYS_PLOT_16_30 = [
   },
 ];
 
-// Собираем 30 дней: 15 базовых + 5 рандомных + 10 сюжетных (рандом в слотах 16,19,22,26,29)
+// Собираем 30 дней: 15 базовых + 5 рандомных из пула + 10 сюжетных (рандом в слотах 16, 19, 22, 26, 29)
 function buildBusinessDays() {
   const shuffled = [...BUSINESS_RANDOM_EVENTS].sort(() => Math.random() - 0.5);
   const randomSlots = [16, 19, 22, 26, 29];
-  const plotIndexByDay = { 17: 0, 18: 1, 20: 2, 21: 3, 23: 4, 24: 5, 25: 6, 27: 10, 28: 11, 30: 12 };
+  // DAYS_PLOT_16_30: 0=day16, 1=17, 2=18, 3=19, 4=20, 5=21, 6=22, 7=23, 8=24, 9=25, 10=27, 11=28, 12=30
+  const plotIndexByDay = { 17: 1, 18: 2, 20: 3, 21: 4, 23: 7, 24: 8, 25: 9, 27: 10, 28: 11, 30: 12 };
   const result = [...DAYS_BASE];
   let r = 0;
   for (let d = 16; d <= 30; d++) {
@@ -358,7 +399,7 @@ export default function ScenarioBusiness({
   difficulty,
   onBackToMap,
 }) {
-  const maxDays = scenario.maxDays ?? 30;
+  const maxDays = 30;
   const goal = scenario.goal || 5000;
   const startCapital = scenario.baseBudget || 1500;
   const [loading, setLoading] = useState(true);
@@ -374,12 +415,12 @@ export default function ScenarioBusiness({
   const [isTyping, setIsTyping] = useState(false);
   const [showUnlock, setShowUnlock] = useState(false);
   const [introSeen, setIntroSeen] = useState(false);
-  const [businessDays, setBusinessDays] = useState([]);
+  const [businessDays, setBusinessDays] = useState(() => buildBusinessDays());
   const typingTimer = useRef(null);
   const fullTextRef = useRef('');
 
   const INTRO_TEXT = `Лето! У тебя появилась отличная идея — открыть свой киоск с лимонадом в парке. У тебя есть стартовый капитал ${startCapital} руб. Нужно закупить инвентарь, ингредиенты, выбрать место и, может быть, нанять помощника. Погода переменчива, конкуренты не дремлют, но бывают и удачные дни. Сможешь ли ты заработать на смартфон за ${goal} руб.? У тебя ${maxDays} дней.`;
-  const DAYS = businessDays.length === maxDays ? businessDays : [...DAYS_BASE];
+  const DAYS = businessDays.length >= maxDays ? businessDays : [...DAYS_BASE];
   const currentEvent = DAYS[dayIndex] || DAYS[DAYS.length - 1];
   const currentDay = currentEvent.day;
   const isExpert = difficulty === 'expert';
@@ -519,9 +560,9 @@ export default function ScenarioBusiness({
 
   const handleChoice = (choice) => {
     const baseDelta = choice.delta || 0;
-    // Ежедневный доход от киоска: тем выше, чем выше популярность (реально дойти до 5к за 30 дней)
-    const dailyIncome = Math.round(25 + (popularity / 100) * 60);
-    const popularityBonus = baseDelta > 0 ? Math.round((popularity / 100) * Math.max(15, baseDelta * 0.4)) : 0;
+    // Ежедневный доход от киоска: тем выше, чем выше популярность (достижима цель 5000 ₽ за 30 дней при разумных решениях)
+    const dailyIncome = Math.round(35 + (popularity / 100) * 75);
+    const popularityBonus = baseDelta > 0 ? Math.round((popularity / 100) * Math.max(18, baseDelta * 0.45)) : 0;
     const effectiveDelta = baseDelta + popularityBonus + dailyIncome;
     const newBudget = Math.round(budget + effectiveDelta);
     const newPopularity = Math.max(0, Math.min(100, popularity + (choice.popularityDelta || 0)));
