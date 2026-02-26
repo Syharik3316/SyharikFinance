@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ScenarioStage from '../components/ScenarioStage.jsx';
 
 // Фоны по дням: положи файлы day1.jpg … day30.jpg в frontend/public/backgrounds/lemonade/
@@ -421,6 +421,17 @@ export default function ScenarioBusiness({
   const [businessDays, setBusinessDays] = useState(() => buildBusinessDays());
   const typingTimer = useRef(null);
   const fullTextRef = useRef('');
+
+  const lemonadeBgUrls = useMemo(
+    () => Array.from({ length: 30 }, (_, i) => `${LEMONADE_BG_BASE}/day${i + 1}.jpg`),
+    []
+  );
+  useEffect(() => {
+    lemonadeBgUrls.forEach((url) => {
+      const img = new Image();
+      img.src = url;
+    });
+  }, [lemonadeBgUrls]);
 
   const INTRO_TEXT = `Лето! У тебя появилась отличная идея — открыть свой киоск с лимонадом в парке. У тебя есть стартовый капитал ${startCapital} руб. Нужно закупить инвентарь, ингредиенты, выбрать место и, может быть, нанять помощника. Погода переменчива, конкуренты не дремлют, но бывают и удачные дни. Сможешь ли ты заработать на смартфон за ${goal} руб.? У тебя ${maxDays} дней.`;
   const DAYS = businessDays.length >= maxDays ? businessDays : [...DAYS_BASE];

@@ -4,23 +4,32 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 const PRODUCTION = { food: 4, wood: 3, stone: 2, market: 2 };
 const FOOD_PER_COLONIST = 2;
 const COLONISTS = 4;
-const HAND_LIMIT = 30;
-const WAREHOUSE_LIMIT = 100;
+const HAND_LIMIT = 60;
+const WAREHOUSE_LIMIT = 200;
 const RESOURCE_KEYS = ['food', 'wood', 'stone', 'coins'];
 
+const HUT_LIMIT = 4;
+const WATCHTOWER_REPAIR_WOOD = 5;
+const WATCHTOWER_REPAIR_STONE = 5;
+const STORM_BREAK_HUT_CHANCE = 0.5;
+const VILLAGE_GIFT_DELAY_DAYS = 3;
+const ZONE_UPGRADE_COST = 30; // ракушек за улучшение зоны +1 к добыче
+const ZONE_UPGRADE_MAX = 2; // макс. улучшений на зону
+
 const BUILDINGS = [
-  { id: 'hut', name: 'Хижина', cost: { wood: 25 }, desc: 'Укрытие от непогоды', emoji: '🏠' },
-  { id: 'warehouse', name: 'Склад', cost: { wood: 30 }, desc: 'Хранить запасы на чёрный день', emoji: '🏪' },
-  { id: 'workshop', name: 'Мастерская', cost: { wood: 45, stone: 15 }, desc: 'Инструменты увеличивают добычу', emoji: '🔨' },
-  { id: 'watchtower', name: 'Сторожевая вышка', cost: { wood: 55, stone: 25 }, desc: 'Защита от пиратов', emoji: '🗼' },
+  { id: 'hut', name: 'Хижина', cost: { wood: 35 }, desc: 'Укрытие от непогоды (макс. 4 — по одной на поселенца)', emoji: '🏠', maxCount: HUT_LIMIT },
+  { id: 'warehouse', name: 'Склад', cost: { wood: 60 }, desc: 'Хранить запасы на чёрный день', emoji: '🏪' },
+  { id: 'workshop', name: 'Мастерская', cost: { wood: 90, stone: 30 }, desc: 'Инструменты увеличивают добычу', emoji: '🔨' },
+  { id: 'watchtower', name: 'Сторожевая вышка', cost: { wood: 110, stone: 50 }, desc: 'Защита от пиратов', emoji: '🗼' },
 ];
 
-const HAND_LIMIT_FULL = 30;
-const WAREHOUSE_LIMIT_FULL = 100;
+const HAND_LIMIT_FULL = 60;
+const WAREHOUSE_LIMIT_FULL = 200;
 
 function isGame100Percent(g) {
   if (!g?.buildings || !g?.resources || !g?.warehouse) return false;
-  if (g.buildings.hut !== 2 || g.buildings.warehouse !== 2 || g.buildings.workshop !== 2 || g.buildings.watchtower !== 2) return false;
+  const huts = typeof g.buildings.hut === 'number' ? g.buildings.hut : (g.buildings.hut === 2 ? 1 : 0);
+  if (huts < HUT_LIMIT || g.buildings.warehouse !== 2 || g.buildings.workshop !== 2 || g.buildings.watchtower !== 2) return false;
   const r = g.resources;
   const w = g.warehouse;
   return (
@@ -44,8 +53,8 @@ const RULES_TEXT = `Правила игры «Остров сокровищ»
 • 🐚 Ракушки — валюта. Зарабатываются на «Рынке» (поселенцы торгуют). Нужны для сделок и дани.
 
 Лимиты:
-• В руках: максимум 30 единиц каждого ресурса. Излишки автоматически переходят на склад (если склад построен).
-• На складе: максимум 100 единиц каждого вида. Склад открывается кнопкой «Склад» после постройки.
+• В руках: максимум 60 единиц каждого ресурса. Излишки автоматически переходят на склад (если склад построен).
+• На складе: максимум 200 единиц каждого вида. Склад открывается кнопкой «Склад» после постройки.
 
 Защищённый ресурс: в окне склада можно выбрать один вид ресурса — он не будет отниматься в случайных событиях (пираты, шторм и т.д.). Выбор можно менять в любой момент.
 
@@ -55,28 +64,36 @@ const RULES_TEXT = `Правила игры «Остров сокровищ»
 3. После итогов дня может выпасть случайное событие — сделай выбор. Один вид ресурса (выбранный на складе) в событиях не теряется.
 4. Строй здания в «Магазине построек», перетащи купленное только на территорию лагеря.
 
-Постройки: Хижина (укрытие), Склад (хранение до 100, лимит в руках 30), Мастерская (улучшения), Сторожевая вышка (защита от пиратов).
+Постройки: Хижина — макс. 4 (по одной на поселенца; дают +1 к добыче и защиту от шторма). Склад (хранение до 200). Мастерская (улучшения зон за ракушки). Сторожевая вышка (защита от пиратов; при отражении нужен ремонт).
 
-Цель: игру можно пройти, купив все строения и забив склад и руки ресурсами по максимуму (30 в руках и до 100 на складе каждого вида).`;
+Цель: игру можно пройти, купив все строения и забив склад и руки ресурсами по максимуму (60 в руках и до 200 на складе каждого вида).`;
 
 const EVENTS = [
   {
     id: 'storm',
     title: 'Шторм',
-    text: 'Ночью был шторм. Хижина повреждена. Починить (18 дерева) или жить в руинах — поселенцы будут работать хуже.',
+    text: 'Ночью был шторм. Хижина повреждена. Починить (36 дерева) или снести — хижина пропадёт с карты.',
     choices: [
-      { label: 'Починить (18 дерева)', cost: { wood: 18 }, effect: 'fixed', tip: 'Затраты сейчас — спокойствие потом.' },
-      { label: 'Жить в руинах', cost: {}, effect: 'sad', tip: 'Экономия сейчас может обернуться потерями.' },
+      { label: 'Починить (36 дерева)', cost: { wood: 36 }, effect: 'fixed', voluntaryCost: true, tip: 'Затраты сейчас — спокойствие потом.' },
+      { label: 'Снести (потерять хижину)', cost: {}, effect: 'hut_removed', voluntaryCost: false, tip: 'Без ремонта постройка теряется.' },
+    ],
+  },
+  {
+    id: 'storm_no_hut',
+    title: 'Шторм',
+    text: 'Ночью сильный шторм. Без хижин один поселенец заболел и не сможет работать 3 дня.',
+    choices: [
+      { label: 'Понятно', cost: {}, effect: 'sick_settler', voluntaryCost: false, tip: 'Укрытие защищает от непогоды и болезней.' },
     ],
   },
   {
     id: 'pirates',
     title: 'Пираты',
-    text: 'К берегу причалили пираты. Требуют дань: 28 ракушек. Либо отдать, либо отбиться (нужна Сторожевая вышка).',
+    text: 'К берегу причалили пираты. Требуют дань. Можно отдать все ракушки, отказаться (тогда заберут понемногу) или отбиться вышкой (но её придётся чинить).',
     choices: [
-      { label: 'Отдать 28 ракушек', cost: { coins: 28 }, effect: 'paid', tip: 'Иногда откупиться — самый разумный выбор.' },
-      { label: 'Отбиться (есть вышка)', cost: {}, effect: 'fight', requireBuilding: 'watchtower', tip: 'Защита окупается в кризис.' },
-      { label: 'Отказаться (нет вышки)', cost: {}, effect: 'robbed', tip: 'Без защиты можно потерять больше.', robbed: { coins: 28, food: 8 } },
+      { label: 'Отдать все ракушки', cost: {}, effect: 'pirates_give_all', voluntaryCost: false, tip: 'Иногда откупиться — самый разумный выбор.' },
+      { label: 'Отбиться (есть вышка)', cost: {}, effect: 'fight', requireBuilding: 'watchtower', voluntaryCost: false, tip: 'Защита окупается, но ремонт стоит полцены вышки.' },
+      { label: 'Отказаться (нет вышки)', cost: {}, effect: 'robbed', requireNoBuilding: 'watchtower', robbed: { coins: 24, food: 8, wood: 10 }, voluntaryCost: false, tip: 'Без защиты можно потерять ресурсы.' },
     ],
   },
   {
@@ -84,99 +101,124 @@ const EVENTS = [
     title: 'Торговый корабль',
     text: 'Купцы предлагают обмен: 7 камней на 12 еды. Выгодно ли?',
     choices: [
-      { label: 'Обменять (7 камня → 12 еды)', cost: { stone: 7 }, gain: { food: 12 }, effect: 'trade', tip: 'Обмен выгоден, когда у тебя много одного и мало другого.' },
-      { label: 'Отказаться', cost: {}, effect: 'skip', tip: 'Не всегда нужно соглашаться на сделку.' },
+      { label: 'Обменять (14 камня → 24 еды)', cost: { stone: 14 }, gain: { food: 24 }, effect: 'trade', voluntaryCost: true, tip: 'Обмен выгоден, когда у тебя много одного и мало другого.' },
+      { label: 'Отказаться', cost: {}, effect: 'skip', voluntaryCost: false, tip: 'Не всегда нужно соглашаться на сделку.' },
     ],
   },
   {
     id: 'stranger',
     title: 'Незнакомец',
-    text: 'Чужеземец предлагает обменять «золотую» монету на 3 обычные ракушки. Выглядит подозрительно...',
+    text: 'Чужеземец предлагает обменять «золотую» монету на 6 обычных ракушек. Выглядит подозрительно...',
     choices: [
-      { label: 'Согласиться', cost: { coins: 3 }, effect: 'scam', tip: 'Слишком выгодное предложение часто обман.' },
-      { label: 'Отказаться', cost: {}, effect: 'safe', tip: 'Осторожность сберегла ресурсы.' },
+      { label: 'Согласиться', cost: { coins: 6 }, effect: 'scam', voluntaryCost: true, tip: 'Слишком выгодное предложение часто обман.' },
+      { label: 'Отказаться', cost: {}, effect: 'safe', voluntaryCost: false, tip: 'Осторожность сберегла ресурсы.' },
     ],
   },
   {
     id: 'trader_debt',
     title: 'Торговец в долг',
-    text: 'Торговец предлагает 30 еды сейчас — через 5 дней вернуть 40. Занять? (Режим Знаток)',
+    text: 'Торговец предлагает 60 еды сейчас — через 5 дней вернуть 80. Занять? (Режим Знаток)',
     expertOnly: true,
     choices: [
-      { label: 'Взять в долг (30 еды → вернуть 40 через 5 дней)', cost: {}, effect: 'debt', gain: { food: 30 }, debt: { resource: 'food', amount: 40, dueDay: 5 }, tip: 'Кредит — не подарок, его нужно отдавать.' },
-      { label: 'Отказаться', cost: {}, effect: 'skip', tip: 'Иногда лучше обойтись без долгов.' },
+      { label: 'Взять в долг (60 еды → вернуть 80 через 5 дней)', cost: {}, effect: 'debt', gain: { food: 60 }, debt: { resource: 'food', amount: 80, dueDay: 5 }, voluntaryCost: false, tip: 'Кредит — не подарок, его нужно отдавать.' },
+      { label: 'Отказаться', cost: {}, effect: 'skip', voluntaryCost: false, tip: 'Иногда лучше обойтись без долгов.' },
     ],
   },
   {
     id: 'windfall',
     title: 'Удача',
-    text: 'На берегу нашли выброшенный ящик: 5 дерева и 3 ракушки.',
+    text: 'На берегу нашли выброшенный ящик: 10 дерева и 6 ракушек.',
     choices: [
-      { label: 'Забрать', cost: {}, gain: { wood: 5, coins: 3 }, effect: 'windfall', tip: 'Случайная удача помогает колонии.' },
+      { label: 'Забрать', cost: {}, gain: { wood: 10, coins: 6 }, effect: 'windfall', voluntaryCost: false, tip: 'Случайная удача помогает колонии.' },
     ],
   },
   {
     id: 'berries',
     title: 'Урожай ягод',
-    text: 'Поселенцы нашли богатую поляну. +6 еды бесплатно.',
+    text: 'Поселенцы нашли богатую поляну. +12 еды бесплатно.',
     choices: [
-      { label: 'Собрать', cost: {}, gain: { food: 6 }, effect: 'berries', tip: 'Разнообразие источников еды снижает риск.' },
+      { label: 'Собрать', cost: {}, gain: { food: 12 }, effect: 'berries', voluntaryCost: false, tip: 'Разнообразие источников еды снижает риск.' },
     ],
   },
   {
     id: 'savings_lesson',
     title: 'Совет старейшины',
-    text: 'Старейшина говорит: «Кто откладывает часть добычи на склад — тот переживёт неурожай». Построить склад (30 дерева)?',
+    text: 'Старейшина говорит: «Кто откладывает часть добычи на склад — тот переживёт неурожай». Построить склад (60 дерева)?',
     choices: [
-      { label: 'Построить склад', cost: { wood: 30 }, effect: 'warehouse_advice', tip: 'Накопления помогают в кризис.' },
-      { label: 'Пока не буду', cost: {}, effect: 'skip', tip: 'Планировать запасы — основа финансовой безопасности.' },
+      { label: 'Построить склад', cost: { wood: 60 }, effect: 'warehouse_advice', voluntaryCost: true, tip: 'Накопления помогают в кризис.' },
+      { label: 'Пока не буду', cost: {}, effect: 'skip', voluntaryCost: false, tip: 'Планировать запасы — основа финансовой безопасности.' },
     ],
   },
   {
     id: 'price_compare',
     title: 'Два торговца',
-    text: 'Один торговец: 12 еды за 10 ракушек. Другой: 12 еды за 7 ракушек. К кому идти?',
+    text: 'Один торговец: 24 еды за 20 ракушек. Другой: 24 еды за 14 ракушек. К кому идти?',
     choices: [
-      { label: 'За 7 ракушек (выгоднее)', cost: { coins: 7 }, gain: { food: 12 }, effect: 'smart_buy', tip: 'Сравнивай цены — так экономятся ресурсы.' },
-      { label: 'За 10 ракушек', cost: { coins: 10 }, gain: { food: 12 }, effect: 'overpay', tip: 'Всегда сравнивай предложения перед сделкой.' },
+      { label: 'За 14 ракушек (выгоднее)', cost: { coins: 14 }, gain: { food: 24 }, effect: 'smart_buy', voluntaryCost: true, tip: 'Сравнивай цены — так экономятся ресурсы.' },
+      { label: 'За 20 ракушек', cost: { coins: 20 }, gain: { food: 24 }, effect: 'overpay', voluntaryCost: true, tip: 'Всегда сравнивай предложения перед сделкой.' },
+      { label: 'Отказаться', cost: {}, effect: 'skip', voluntaryCost: false, tip: 'Не всегда нужно соглашаться на сделку.' },
     ],
   },
   {
     id: 'need_vs_want',
     title: 'Соблазн',
-    text: 'Купцы везут украшения: красиво, но бесполезно для выживания. Купить за 22 ракушки?',
+    text: 'Купцы везут украшения: красиво, но бесполезно для выживания. Купить за 44 ракушки?',
     choices: [
-      { label: 'Купить (хочу!)', cost: { coins: 22 }, effect: 'want', tip: 'Сначала нужды (еда, кров), потом желания.' },
-      { label: 'Нет, сэкономим на важное', cost: {}, effect: 'need', tip: 'Различать «нужно» и «хочу» — основа бюджета.' },
+      { label: 'Купить (хочу!)', cost: { coins: 44 }, effect: 'want', voluntaryCost: true, tip: 'Сначала нужды (еда, кров), потом желания.' },
+      { label: 'Нет, сэкономим на важное', cost: {}, effect: 'need', voluntaryCost: false, tip: 'Различать «нужно» и «хочу» — основа бюджета.' },
     ],
   },
   {
     id: 'insurance_idea',
     title: 'Подстраховка',
-    text: 'После шторма кто-то говорит: «Если бы мы копили дерево на ремонт, не пришлось бы жить в руинах». Это про то, что запасы — как страховка.',
+    text: 'Кто-то из поселенцев мимоходом замечает: «Запасы на чёрный день — как страховка: надеешься, что не пригодится, но спокойнее, когда они есть».',
     choices: [
-      { label: 'Понял, буду копить на чёрный день', cost: {}, effect: 'lesson', tip: 'Резерв на кризис — часть финансовой грамотности.' },
+      { label: 'Понял, буду копить на чёрный день', cost: {}, effect: 'lesson', voluntaryCost: false, tip: 'Резерв на кризис — часть финансовой грамотности.' },
     ],
   },
   {
     id: 'scam_offer',
     title: '«Супер-предложение»',
-    text: 'Незнакомец: «Дам 50 еды за 5 ракушек! Только сейчас!» Слишком дёшево — подозрительно.',
+    text: 'Незнакомец: «Дам 50 еды за 10 ракушек! Только сейчас!» Слишком дёшево — подозрительно.',
     choices: [
-      { label: 'Согласиться', cost: { coins: 5 }, effect: 'scam_lose', tip: 'Если предложение «слишком хорошее» — часто обман.' },
-      { label: 'Отказаться', cost: {}, effect: 'scam_avoid', tip: 'Осторожность с незнакомыми сделками сберегла ресурсы.' },
+      { label: 'Согласиться', cost: { coins: 10 }, effect: 'scam_lose', voluntaryCost: true, tip: 'Если предложение «слишком хорошее» — часто обман.' },
+      { label: 'Отказаться', cost: {}, effect: 'scam_avoid', voluntaryCost: false, tip: 'Осторожность с незнакомыми сделками сберегла ресурсы.' },
     ],
   },
   {
     id: 'share_resources',
     title: 'Соседи просят помощи',
-    text: 'Соседний лагерь голодает. Поделиться 8 едой? Доброта может вернуться помощью позже.',
+    text: 'Соседний лагерь голодает. Поделиться 16 едой? Доброта может вернуться помощью позже.',
     choices: [
-      { label: 'Поделиться (8 еды)', cost: { food: 8 }, effect: 'share', tip: 'Взаимопомощь и репутация тоже ценны.' },
-      { label: 'Извиниться, не можем', cost: {}, effect: 'skip', tip: 'Сначала обеспечивать свою колонию — разумно.' },
+      { label: 'Поделиться (16 еды)', cost: { food: 16 }, effect: 'share', voluntaryCost: true, tip: 'Взаимопомощь и репутация тоже ценны.' },
+      { label: 'Извиниться, не можем', cost: {}, effect: 'skip', voluntaryCost: false, tip: 'Сначала обеспечивать свою колонию — разумно.' },
+    ],
+  },
+  {
+    id: 'ruins',
+    title: 'Жизнь в руинах',
+    text: 'Одна из хижин разрушена и не починена. Поселенцы жалуются: в руинах хуже отдыхать — работа идёт медленнее.',
+    choices: [
+      { label: 'Понятно', cost: {}, effect: 'skip', voluntaryCost: false, tip: 'Почини хижину в следующем шторме или потеряешь её.' },
     ],
   },
 ];
+
+const EVENT_LESSONS = {
+  storm: 'Укрытие защищает от непогоды. Ремонт вовремя сохраняет постройку.',
+  storm_no_hut: 'Хижины дают крышу над головой и снижают болезни. Строй по одной на каждого поселенца (макс. 4).',
+  pirates: 'Защита (вышка) или дань — два способа снизить потери. Ремонт после боя тоже часть расходов.',
+  trade_ship: 'Обмен выгоден, когда у тебя много одного и мало другого. Сравнивай что отдаёшь и что получаешь.',
+  stranger: 'Слишком выгодные предложения от незнакомцев часто обман. Доверяй, но проверяй.',
+  price_compare: 'Сравнивай цены у разных продавцов — так экономятся деньги.',
+  need_vs_want: 'Сначала нужды (еда, кров, безопасность), потом желания. Так строится бюджет.',
+  share_resources: 'Доброта и репутация ценны. Помощь соседям может вернуться подарком.',
+  scam_offer: '«Слишком хорошее» предложение — повод насторожиться. Осторожность сберегает ресурсы.',
+  savings_lesson: 'Склад — запас на чёрный день. Один защищённый вид ресурса не отнимут в событиях.',
+  berries: 'Разнообразие источников еды снижает риск. Не клади все яйца в одну корзину.',
+  insurance_idea: 'Резерв на ремонт и кризис — как страховка. Копи на непредвиденное.',
+  ruins: 'Разрушенная постройка без ремонта теряется. Своевременный ремонт выгоднее потери.',
+};
 
 const JOB_ZONES = ['camp', 'food', 'wood', 'stone', 'market'];
 
@@ -184,6 +226,46 @@ function assignmentFromSettlers(settlers) {
   const a = { camp: 0, food: 0, wood: 0, stone: 0, market: 0 };
   (settlers || []).forEach((s) => { a[s.job] = (a[s.job] || 0) + 1; });
   return a;
+}
+
+/** Количество рабочих (без лагеря), с учётом больного поселенца: один не работает пока sickSettlerDaysLeft > 0 */
+function effectiveWorkers(assign, sickDaysLeft) {
+  const total = (assign.food || 0) + (assign.wood || 0) + (assign.stone || 0) + (assign.market || 0);
+  const sick = sickDaysLeft > 0 ? 1 : 0;
+  const effective = Math.max(0, total - sick);
+  const food = assign.food || 0;
+  const wood = assign.wood || 0;
+  const stone = assign.stone || 0;
+  const market = assign.market || 0;
+  let rest = effective;
+  const eFood = Math.min(food, rest);
+  rest -= eFood;
+  const eWood = Math.min(wood, rest);
+  rest -= eWood;
+  const eStone = Math.min(stone, rest);
+  rest -= eStone;
+  const eMarket = Math.min(market, rest);
+  return { food: eFood, wood: eWood, stone: eStone, market: eMarket };
+}
+
+/** Эффективное число хижин (построены и не сломаны). Для бонуса +1 к добыче на каждую хижину. */
+function effectiveHuts(g) {
+  const huts = typeof g?.buildings?.hut === 'number' ? g.buildings.hut : 0;
+  const broken = g?.brokenHuts || 0;
+  return Math.max(0, huts - broken);
+}
+
+/** Бонус производства от хижин: первые effectiveHuts рабочих получают +1 (распределяем по зонам по порядку). */
+function hutBonusPerZone(assign, effectiveHutsCount) {
+  let left = effectiveHutsCount;
+  const food = Math.min(assign.food || 0, left);
+  left -= food;
+  const wood = Math.min(assign.wood || 0, left);
+  left -= wood;
+  const stone = Math.min(assign.stone || 0, left);
+  left -= stone;
+  const market = Math.min(assign.market || 0, left);
+  return { food, wood, stone, market };
 }
 
 function getInitialState(difficulty) {
@@ -194,6 +276,11 @@ function getInitialState(difficulty) {
     eventLog: [],
     buildings: { hut: 0, warehouse: 0, workshop: 0, watchtower: 0 },
     buildingPlacement: {},
+    brokenHuts: 0,
+    sickSettlerDaysLeft: 0,
+    sharedWithVillageDay: null,
+    villageGiftDay: null,
+    zoneUpgrades: { food: 0, wood: 0, stone: 0, market: 0 },
     settlers: [
       { id: 0, job: 'camp' },
       { id: 1, job: 'camp' },
@@ -215,6 +302,16 @@ function normalizeLoadedState(state) {
   if (!state.warehouse) out.warehouse = { food: 0, wood: 0, stone: 0, coins: 0 };
   if (state.protectedResourceType === undefined) out.protectedResourceType = null;
   if (!Array.isArray(state.eventLog)) out.eventLog = state.eventLog ? [state.eventLog] : [];
+  if (out.brokenHuts == null) out.brokenHuts = 0;
+  if (out.sickSettlerDaysLeft == null) out.sickSettlerDaysLeft = 0;
+  if (out.sharedWithVillageDay == null) out.sharedWithVillageDay = null;
+  if (out.villageGiftDay == null) out.villageGiftDay = null;
+  if (!out.zoneUpgrades) out.zoneUpgrades = { food: 0, wood: 0, stone: 0, market: 0 };
+  if (out.buildings && (out.buildings.hut === 1 || out.buildings.hut === 2)) {
+    out.buildings = { ...out.buildings, hut: 1 };
+    if (!out.buildingPlacement?.hut) out.buildingPlacement = { ...(out.buildingPlacement || {}), hut: { zoneId: 'camp', x: 50, y: 50 } };
+  }
+  if (typeof out.buildings?.hut === 'number' && out.buildings.hut > HUT_LIMIT) out.buildings = { ...out.buildings, hut: HUT_LIMIT };
   if (state.settlers && Array.isArray(state.settlers)) {
     out.settlers = state.settlers.map((s) => ({ ...s, job: s.job === 'build' ? 'market' : s.job }));
     return out;
@@ -258,11 +355,28 @@ function payFromHandAndWarehouse(resources, warehouse, cost) {
   return { resources: res, warehouse: wh };
 }
 
-/** То же, но не списывает защищённый тип ресурса (для событий). */
-function payFromHandAndWarehouseIgnoreProtected(resources, warehouse, cost, protectedType) {
-  const filteredCost = { ...cost };
-  if (protectedType) delete filteredCost[protectedType];
-  return payFromHandAndWarehouse(resources, warehouse, filteredCost);
+/** Добровольная оплата: списывает даже защищённый ресурс (торговля, ремонт, подарок). */
+function payFromHandAndWarehouseVoluntary(resources, warehouse, cost) {
+  return payFromHandAndWarehouse(resources, warehouse, cost || {});
+}
+
+/** Принудительные потери (грабёж, шторм): защищённый тип не трогаем. Списываем с руки, потом со склада. */
+function takeFromHandAndWarehouseForced(resources, warehouse, amounts, protectedType) {
+  const res = { ...resources };
+  const wh = { ...(warehouse || {}) };
+  RESOURCE_KEYS.forEach((k) => {
+    if (k === protectedType) return;
+    const want = amounts[k] || 0;
+    if (want <= 0) return;
+    let fromHand = Math.min(res[k] || 0, want);
+    res[k] = (res[k] || 0) - fromHand;
+    let rest = want - fromHand;
+    if (rest > 0) {
+      const fromWh = Math.min(wh[k] || 0, rest);
+      wh[k] = (wh[k] || 0) - fromWh;
+    }
+  });
+  return { resources: res, warehouse: wh };
 }
 
 function applyCost(resources, cost) {
@@ -347,15 +461,24 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
   const [mobilePanel, setMobilePanel] = useState(null); // 'shop' | 'log' | null
   const [confirmReset, setConfirmReset] = useState(false);
   const [warehouseModalOpen, setWarehouseModalOpen] = useState(false);
+  const [workshopModalOpen, setWorkshopModalOpen] = useState(false);
   const [rulesModalOpen, setRulesModalOpen] = useState(false);
   const [showRulesBeforeStart, setShowRulesBeforeStart] = useState(false);
   const [gameOverMeta, setGameOverMeta] = useState(null);
+  const [eventOutro, setEventOutro] = useState(null);
 
   const loadGame = useCallback(async () => {
     try {
       const res = await apiFetch(`${apiBase}/island-game`);
       if (res.ok) {
         const data = await res.json();
+        if (data && data.state && data.gameOver) {
+          await apiFetch(`${apiBase}/island-game`, { method: 'DELETE' }).catch(() => {});
+          setGame(null);
+          setPhase('menu');
+          setLoading(false);
+          return;
+        }
         if (data && data.state) {
           const state = normalizeLoadedState(data.state);
           setGame({
@@ -364,10 +487,9 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
             gameOver: data.gameOver,
             ...state,
           });
-          setPhase(data.gameOver ? 'gameover' : 'assign');
+          setPhase('assign');
           setReport(null);
           setEventModal(null);
-          if (data.gameOver) setGameOverModal({ reason: data.gameOver });
         } else {
           setGame(null);
           setPhase('menu');
@@ -472,12 +594,27 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
     const res = { ...g.resources };
     const wh = g.warehouse || { food: 0, wood: 0, stone: 0, coins: 0 };
     const assign = assignmentFromSettlers(g.settlers);
+    const sickDays = g.sickSettlerDaysLeft || 0;
+    const eff = effectiveWorkers(assign, sickDays);
+    const upgrades = g.zoneUpgrades || { food: 0, wood: 0, stone: 0, market: 0 };
+    const hutBonus = hutBonusPerZone(eff, effectiveHuts(g));
     const prod = {
-      food: (assign.food || 0) * PRODUCTION.food,
-      wood: (assign.wood || 0) * PRODUCTION.wood,
-      stone: (assign.stone || 0) * PRODUCTION.stone,
-      coins: (assign.market || 0) * PRODUCTION.market,
+      food: eff.food * PRODUCTION.food + (upgrades.food || 0) + hutBonus.food,
+      wood: eff.wood * PRODUCTION.wood + (upgrades.wood || 0) + hutBonus.wood,
+      stone: eff.stone * PRODUCTION.stone + (upgrades.stone || 0) + hutBonus.stone,
+      coins: eff.market * PRODUCTION.market + (upgrades.market || 0) + hutBonus.market,
     };
+    if (sickDays > 0) {
+      g.sickSettlerDaysLeft = sickDays - 1;
+    }
+    const nextDay = (g.dayCount || 1) + 1;
+    if (g.sharedWithVillageDay != null && nextDay >= g.sharedWithVillageDay + VILLAGE_GIFT_DELAY_DAYS && g.villageGiftDay == null) {
+      g.villageGiftDay = nextDay;
+      res.food = (res.food || 0) + 10;
+      res.wood = (res.wood || 0) + 6;
+      g.eventLog = (g.eventLog || []).slice(-49);
+      g.eventLog.push({ day: nextDay, type: 'event', message: `День ${nextDay}: соседняя деревня прислала подарок за помощь: +10 еды, +6 дерева. Добро возвращается!` });
+    }
     const consumed = COLONISTS * FOOD_PER_COLONIST;
     res.food = (res.food || 0) + prod.food - consumed;
     res.wood = (res.wood || 0) + prod.wood;
@@ -530,7 +667,7 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
         reason: 'victory',
         message: 'Поздравляем! Ты полностью развил колонию: все постройки на карте, руки и склад заполнены по максимуму. Игра пройдена на 100%.',
       });
-      saveGame({ difficulty: g.difficulty, dayCount: g.dayCount, gameOver: 'victory', state: g });
+      saveGame({ difficulty: g.difficulty, dayCount: g.dayCount, gameOver: 'victory', state: g }).then(() => deleteGameSave());
     } else {
       setGame(g);
       setReport(g.lastReport);
@@ -553,70 +690,122 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
       setPhase('assign');
       return;
     }
-    const evPool = EVENTS.filter((e) => !e.expertOnly || game.difficulty === 'expert');
-    const ev = evPool[Math.floor(Math.random() * evPool.length)];
+    const huts = typeof game.buildings?.hut === 'number' ? game.buildings.hut : (game.buildings?.hut === 2 ? 1 : 0);
+    const hasWarehouse = game.buildings?.warehouse === 2;
+    const brokenHuts = game.brokenHuts || 0;
+    let evPool = EVENTS.filter((e) => {
+      if (e.expertOnly && game.difficulty !== 'expert') return false;
+      if (e.id === 'savings_lesson' || e.id === 'berries') return !hasWarehouse;
+      if (e.id === 'ruins') return brokenHuts > 0;
+      if (e.id === 'storm_no_hut') return huts === 0;
+      if (e.id === 'storm') return huts >= 1 && huts < HUT_LIMIT && brokenHuts === 0;
+      if (e.id === 'pirates') return true;
+      return true;
+    });
+    if (evPool.length === 0) evPool = EVENTS.filter((e) => !e.expertOnly || game.difficulty === 'expert');
+    let ev = evPool[Math.floor(Math.random() * evPool.length)];
+    if (ev.id === 'storm' && huts >= 1) {
+      const breakHut = Math.random() < STORM_BREAK_HUT_CHANCE;
+      if (breakHut) {
+        const g = { ...game, brokenHuts: 1 };
+        setGame(g);
+        saveGame({ difficulty: g.difficulty, dayCount: g.dayCount, gameOver: null, state: g });
+      } else {
+        ev = EVENTS.find((e) => e.id === 'insurance_idea') || ev;
+      }
+    }
     setEventModal(ev);
     setPhase('event');
-  }, [game]);
+  }, [game, saveGame]);
 
   const pickEventChoice = useCallback((eventId, choiceIndex) => {
     if (!game || !eventModal) return;
     const ev = EVENTS.find((e) => e.id === eventId) || eventModal;
     const choice = ev.choices[choiceIndex];
     if (!choice) return;
-    const g = { ...game };
-    const res = { ...g.resources };
-    const protectedType = g.protectedResourceType || null;
-    const hasRequiredBuilding = !choice.requireBuilding || (g.buildings[choice.requireBuilding] && g.buildings[choice.requireBuilding] >= 1);
-    let logMessage = '';
-    if (choice.effect === 'fight' && hasRequiredBuilding) {
-      logMessage = `День ${g.dayCount}: событие «${ev.title}» — отбились (есть вышка).`;
-      g.eventLog = (g.eventLog || []).slice(-49);
-      g.eventLog.push({ day: g.dayCount, type: 'event', message: logMessage });
-      setEventModal(null);
-      setPhase('assign');
-      setGame(g);
-      saveGame({ difficulty: g.difficulty, dayCount: g.dayCount, gameOver: null, state: g });
-      return;
+    const voluntaryCost = choice.voluntaryCost === true;
+    if (voluntaryCost && Object.keys(choice.cost || {}).some((k) => (choice.cost[k] || 0) > 0)) {
+      if (!canAffordWithWarehouse(game.resources, game.warehouse, choice.cost)) return;
     }
-    const robbed = choice.robbed || { coins: 20, food: 5 };
-    if (choice.effect === 'fight' && !hasRequiredBuilding) {
-      const takeCoins = protectedType === 'coins' ? 0 : Math.min(res.coins || 0, robbed.coins || 20);
-      const takeFood = protectedType === 'food' ? 0 : Math.min(res.food || 0, robbed.food || 5);
-      res.coins = Math.max(0, (res.coins || 0) - takeCoins);
-      res.food = Math.max(0, (res.food || 0) - takeFood);
+    const g = { ...game };
+    let res = { ...g.resources };
+    let wh = { ...(g.warehouse || { food: 0, wood: 0, stone: 0, coins: 0 }) };
+    const protectedType = g.protectedResourceType || null;
+    let logMessage = '';
+    const hasTower = g.buildings?.watchtower === 2;
+
+    if (choice.effect === 'pirates_give_all') {
+      const allCoins = (res.coins || 0) + (wh.coins || 0);
+      const paid = payFromHandAndWarehouseVoluntary(res, wh, { coins: allCoins });
+      res = paid.resources;
+      wh = paid.warehouse;
       g.resources = res;
-      logMessage = `День ${g.dayCount}: «${ev.title}» — пираты забрали 🐚${takeCoins} 🍎${takeFood}. Итог: без вышки потеряли ресурсы.`;
-      setLastEventMessage(`Пираты украли: ${takeCoins} ракушек и ${takeFood} еды. Защита (вышка) могла бы помочь.`);
-      setTip('Без вышки отказ от дани привёл к грабежу. Защита окупается.');
+      g.warehouse = wh;
+      logMessage = `День ${g.dayCount}: «${ev.title}» — отдали все ракушки (${allCoins}).`;
+    } else if (choice.effect === 'fight' && hasTower) {
+      const repairCost = { wood: WATCHTOWER_REPAIR_WOOD, stone: WATCHTOWER_REPAIR_STONE };
+      if (!canAffordWithWarehouse(res, wh, repairCost)) return;
+      const paid = payFromHandAndWarehouseVoluntary(res, wh, repairCost);
+      g.resources = paid.resources;
+      g.warehouse = paid.warehouse;
+      logMessage = `День ${g.dayCount}: «${ev.title}» — отбились. Починка вышки: 🪵${WATCHTOWER_REPAIR_WOOD} 🪨${WATCHTOWER_REPAIR_STONE}.`;
     } else if (choice.effect === 'robbed') {
-      const takeCoins = protectedType === 'coins' ? 0 : Math.min(res.coins || 0, robbed.coins || 20);
-      const takeFood = protectedType === 'food' ? 0 : Math.min(res.food || 0, robbed.food || 5);
-      res.coins = Math.max(0, (res.coins || 0) - takeCoins);
-      res.food = Math.max(0, (res.food || 0) - takeFood);
-      g.resources = res;
-      logMessage = `День ${g.dayCount}: «${ev.title}» — потеряно 🐚${takeCoins} 🍎${takeFood}.`;
-      setLastEventMessage(`Пираты украли: ${takeCoins} ракушек и ${takeFood} еды.`);
-      if (choice.tip) setTip(choice.tip);
-    } else if (canAffordWithWarehouse(res, g.warehouse, choice.cost) || canAffordIgnoringProtectedWithWarehouse(res, g.warehouse, choice.cost, protectedType)) {
-      const costDesc = Object.entries(choice.cost).filter(([k, v]) => v > 0).map(([k, v]) => `${k === 'food' ? '🍎' : k === 'wood' ? '🪵' : k === 'stone' ? '🪨' : '🐚'}${v}`).join(', ') || '—';
-      const gainDesc = choice.gain ? Object.entries(choice.gain).map(([k, v]) => `${k === 'food' ? '🍎' : k === 'wood' ? '🪵' : k === 'stone' ? '🪨' : '🐚'}+${v}`).join(' ') : '';
-      const paid = payFromHandAndWarehouseIgnoreProtected(res, g.warehouse, choice.cost, protectedType);
+      const robbed = choice.robbed || { coins: 12, food: 4, wood: 5 };
+      const taken = takeFromHandAndWarehouseForced(res, wh, robbed, protectedType);
+      g.resources = taken.resources;
+      g.warehouse = taken.warehouse;
+      const desc = Object.entries(robbed).filter(([, v]) => v > 0).map(([k, v]) => `${k === 'coins' ? '🐚' : k === 'food' ? '🍎' : k === 'wood' ? '🪵' : '🪨'}${v}`).join(' ');
+      logMessage = `День ${g.dayCount}: «${ev.title}» — отказались, пираты забрали: ${desc}.`;
+    } else if (choice.effect === 'fixed') {
+      if (!canAffordWithWarehouse(res, wh, choice.cost)) return;
+      const paid = payFromHandAndWarehouseVoluntary(res, wh, choice.cost);
+      g.resources = paid.resources;
+      g.warehouse = paid.warehouse;
+      g.brokenHuts = 0;
+      logMessage = `День ${g.dayCount}: «${ev.title}» — починено (36 дерева).`;
+    } else if (choice.effect === 'hut_removed') {
+      g.buildings = { ...g.buildings, hut: Math.max(0, (g.buildings.hut || 0) - 1) };
+      g.brokenHuts = 0;
+      logMessage = `День ${g.dayCount}: «${ev.title}» — хижина снесена, потеряна.`;
+    } else if (choice.effect === 'sick_settler') {
+      g.sickSettlerDaysLeft = 3;
+      logMessage = `День ${g.dayCount}: «${ev.title}» — один поселенец заболел на 3 дня.`;
+    } else if (choice.effect === 'share') {
+      if (!canAffordWithWarehouse(res, wh, choice.cost)) return;
+      const paid = payFromHandAndWarehouseVoluntary(res, wh, choice.cost);
+      g.resources = paid.resources;
+      g.warehouse = paid.warehouse;
+      g.sharedWithVillageDay = g.dayCount;
+      logMessage = `День ${g.dayCount}: «${ev.title}» — поделились 16 едой. Деревня может отблагодарить позже.`;
+    } else if (voluntaryCost && (choice.cost && Object.keys(choice.cost).length > 0 || choice.gain)) {
+      if (choice.cost && Object.keys(choice.cost).length > 0 && !canAffordWithWarehouse(res, wh, choice.cost)) return;
+      const costToPay = voluntaryCost ? (choice.cost || {}) : {};
+      const paid = payFromHandAndWarehouseVoluntary(res, wh, costToPay);
       g.resources = applyGain(paid.resources, choice.gain);
       g.warehouse = paid.warehouse;
       if (choice.debt) g.debt = { ...choice.debt, dueDay: game.dayCount + (choice.debt.dueDay || 5) };
       if (choice.effect === 'sad') g.sadPenalty = 1;
       if (choice.effect === 'fixed') g.sadPenalty = 0;
-      if (choice.tip && !g.tipsSeen[ev.id]) { g.tipsSeen = { ...g.tipsSeen, [ev.id]: true }; setTip(choice.tip); }
-      logMessage = `День ${g.dayCount}: «${ev.title}» — выбор: ${choice.label}. Потрачено: ${costDesc}${gainDesc ? `. Получено: ${gainDesc}` : ''}`;
+      const costDesc = Object.entries(choice.cost || {}).filter(([, v]) => v > 0).map(([k, v]) => `${k === 'food' ? '🍎' : k === 'wood' ? '🪵' : k === 'stone' ? '🪨' : '🐚'}${v}`).join(', ') || '—';
+      const gainDesc = choice.gain ? Object.entries(choice.gain).map(([k, v]) => `${k === 'food' ? '🍎' : k === 'wood' ? '🪵' : k === 'stone' ? '🪨' : '🐚'}+${v}`).join(' ') : '';
+      logMessage = `День ${g.dayCount}: «${ev.title}» — ${choice.label}. Потрачено: ${costDesc}${gainDesc ? `. Получено: ${gainDesc}` : ''}`;
+    } else {
+      g.resources = applyGain(res, choice.gain);
+      if (choice.debt) g.debt = { ...choice.debt, dueDay: game.dayCount + (choice.debt.dueDay || 5) };
+      if (choice.effect === 'sad') g.sadPenalty = 1;
+      const gainDesc = choice.gain ? Object.entries(choice.gain).map(([k, v]) => `${k === 'food' ? '🍎' : k === 'wood' ? '🪵' : k === 'stone' ? '🪨' : '🐚'}+${v}`).join(' ') : '';
+      logMessage = `День ${g.dayCount}: «${ev.title}» — ${choice.label}${gainDesc ? `. Получено: ${gainDesc}` : ''}`;
     }
+
     if (logMessage) {
       g.eventLog = (g.eventLog || []).slice(-49);
       g.eventLog.push({ day: g.dayCount, type: 'event', message: logMessage });
     }
     setGame(g);
     setEventModal(null);
-    setPhase('assign');
+    const lesson = EVENT_LESSONS[ev.id] || choice.tip || '';
+    setEventOutro({ title: ev.title, tip: choice.tip, lesson });
+    setPhase('event_outro');
     saveGame({ difficulty: g.difficulty, dayCount: g.dayCount, gameOver: null, state: g });
   }, [game, eventModal, saveGame]);
 
@@ -659,7 +848,7 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
       const settlerId = parseInt(id, 10);
       if (!Number.isNaN(settlerId)) moveSettler(settlerId, targetZone, x, y);
     }
-    if (type === 'building' && id && targetZone === 'camp') {
+    if (type === 'building' && id && targetZone === 'camp' && id !== 'hut') {
       placeBuilding(id, targetZone, x, y);
     }
   }, [moveSettler, placeBuilding, getDropPercent]);
@@ -707,7 +896,7 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
           const settlerId = parseInt(touchDrag.id, 10);
           if (!Number.isNaN(settlerId)) moveSettler(settlerId, zone.zoneId, zone.x, zone.y);
         }
-        if (touchDrag.type === 'building' && zone.zoneId === 'camp') {
+        if (touchDrag.type === 'building' && zone.zoneId === 'camp' && touchDrag.id !== 'hut') {
           placeBuilding(touchDrag.id, zone.zoneId, zone.x, zone.y);
         }
       }
@@ -741,13 +930,25 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
   const build = useCallback((buildingId) => {
     if (!game) return;
     const b = BUILDINGS.find((x) => x.id === buildingId);
-    if (!b || (game.buildings[buildingId] && game.buildings[buildingId] > 0)) return;
+    if (!b) return;
+    const isHut = buildingId === 'hut';
+    const hutCount = typeof game.buildings?.hut === 'number' ? game.buildings.hut : (game.buildings?.hut === 2 ? 1 : 0);
+    if (isHut) {
+      if (hutCount >= HUT_LIMIT) return;
+    } else if (game.buildings[buildingId] && game.buildings[buildingId] > 0) return;
     if (!canAffordWithWarehouse(game.resources, game.warehouse, b.cost)) return;
     const g = { ...game };
     const paid = payFromHandAndWarehouse(g.resources, g.warehouse, b.cost);
     g.resources = paid.resources;
     g.warehouse = paid.warehouse;
-    g.buildings = { ...g.buildings, [buildingId]: 1 };
+    if (isHut) {
+      g.buildings = { ...g.buildings, hut: hutCount + 1 };
+      if (hutCount === 0) {
+        g.buildingPlacement = { ...(g.buildingPlacement || {}), hut: { zoneId: 'camp', x: 50, y: 50 } };
+      }
+    } else {
+      g.buildings = { ...g.buildings, [buildingId]: 1 };
+    }
     g.eventLog = (g.eventLog || []).slice(-49);
     g.eventLog.push({
       day: g.dayCount,
@@ -805,6 +1006,21 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
     saveGame({ difficulty: g.difficulty, dayCount: g.dayCount, gameOver: null, state: g });
   }, [game, saveGame]);
 
+  const upgradeZone = useCallback((zoneId) => {
+    if (!game || game.buildings?.workshop !== 2) return;
+    const up = game.zoneUpgrades || { food: 0, wood: 0, stone: 0, market: 0 };
+    if ((up[zoneId] || 0) >= ZONE_UPGRADE_MAX) return;
+    const cost = { coins: ZONE_UPGRADE_COST };
+    if (!canAffordWithWarehouse(game.resources, game.warehouse, cost)) return;
+    const g = { ...game };
+    const paid = payFromHandAndWarehouseVoluntary(g.resources, g.warehouse, cost);
+    g.resources = paid.resources;
+    g.warehouse = paid.warehouse;
+    g.zoneUpgrades = { ...g.zoneUpgrades, [zoneId]: (g.zoneUpgrades?.[zoneId] || 0) + 1 };
+    setGame(g);
+    saveGame({ difficulty: g.difficulty, dayCount: g.dayCount, gameOver: null, state: g });
+  }, [game, saveGame]);
+
   const resetProgress = useCallback(async () => {
     if (!confirmReset) {
       setConfirmReset(true);
@@ -822,6 +1038,7 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
         setPhase('assign');
         setReport(null);
         setEventModal(null);
+        setEventOutro(null);
         setGameOverModal(null);
         setLastEventMessage(null);
       }
@@ -940,12 +1157,27 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
 
   const placement = game.buildingPlacement || {};
   const getPlacementZone = (p) => (p && typeof p === 'object' ? p.zoneId : p) || 'camp';
-  const getPlacementXY = (p) => {
-    if (p && typeof p === 'object' && typeof p.x === 'number' && typeof p.y === 'number') return { x: p.x, y: p.y };
+  const getPlacementXY = (p, index = 0) => {
+    if (p && typeof p === 'object' && typeof p.x === 'number' && typeof p.y === 'number') {
+      const offset = index ? (index * 6) : 0;
+      return { x: Math.max(5, Math.min(95, p.x + offset)), y: Math.max(5, Math.min(95, p.y)) };
+    }
     return { x: 50, y: 50 };
   };
-  const buildingsInZone = (zoneId) =>
-    BUILDINGS.filter((b) => game.buildings[b.id] === 2 && getPlacementZone(placement[b.id]) === zoneId);
+  const buildingsInZone = (zoneId) => {
+    const list = [];
+    BUILDINGS.forEach((b) => {
+      if (b.id === 'hut') {
+        const n = typeof game.buildings?.hut === 'number' ? game.buildings.hut : 0;
+        if (n > 0 && getPlacementZone(placement.hut) === zoneId) {
+          for (let i = 0; i < n; i++) list.push({ ...b, key: `hut_${i}`, hutIndex: i });
+        }
+      } else if (game.buildings[b.id] === 2 && getPlacementZone(placement[b.id]) === zoneId) {
+        list.push({ ...b, key: b.id });
+      }
+    });
+    return list;
+  };
 
   const getZoneConfig = (zoneId) => ({
     imageUrl: ZONE_STATIC_IMAGES[zoneId] || '',
@@ -982,10 +1214,11 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
         )}
         <div className="island-game-zone-layer">
           {buildingsHere.map((b) => {
-            const xy = getPlacementXY(placement[b.id]);
+            const pl = placement[b.id] || placement.hut;
+            const xy = getPlacementXY(pl, b.hutIndex);
             return (
               <span
-                key={b.id}
+                key={b.key || b.id}
                 className="island-game-placed-building island-game-placed-free"
                 title={b.name}
                 style={{ left: `${xy.x}%`, top: `${xy.y}%` }}
@@ -1131,10 +1364,11 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
               )}
               <div className="island-game-zone-layer">
                 {buildingsInZone('camp').map((b) => {
-                  const xy = getPlacementXY(placement[b.id]);
+                  const pl = placement[b.id] || placement.hut;
+                  const xy = getPlacementXY(pl, b.hutIndex);
                   return (
                     <span
-                      key={b.id}
+                      key={b.key || b.id}
                       className="island-game-placed-building island-game-placed-free"
                       title={b.name}
                       style={{ left: `${xy.x}%`, top: `${xy.y}%` }}
@@ -1176,15 +1410,17 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
         <aside className="island-game-buildings island-game-desk-only">
           <div className="island-game-buildings-title">Магазин построек</div>
           {BUILDINGS.map((b) => {
+            const isHut = b.id === 'hut';
+            const hutCount = typeof game.buildings?.hut === 'number' ? game.buildings.hut : 0;
             const status = game.buildings[b.id];
-            const owned = status === 1 || status === 2;
-            const placed = status === 2;
-            const canBuild = !owned && canAffordWithWarehouse(game.resources, game.warehouse, b.cost);
+            const owned = isHut ? hutCount > 0 : (status === 1 || status === 2);
+            const placed = isHut ? hutCount > 0 : status === 2;
+            const canBuild = isHut ? hutCount < HUT_LIMIT && canAffordWithWarehouse(game.resources, game.warehouse, b.cost) : !owned && canAffordWithWarehouse(game.resources, game.warehouse, b.cost);
             return (
               <div key={b.id} className="island-game-building-card">
-                <div><strong>{b.name}</strong> {placed ? '✓ на карте' : owned ? '(куплено)' : ''}</div>
+                <div><strong>{b.name}</strong> {placed ? (isHut ? `✓ ${hutCount}/${HUT_LIMIT} на карте` : '✓ на карте') : owned ? '(куплено)' : ''}</div>
                 <div className="text-muted" style={{ fontSize: '0.85rem' }}>{b.desc}</div>
-                {!owned && (
+                {(!owned || (isHut && hutCount < HUT_LIMIT)) && (
                   <div style={{ fontSize: '0.8rem', marginTop: 4 }}>
                     {Object.entries(b.cost).map(([k, v]) => (
                       <span key={k} style={{ marginRight: 8 }}>
@@ -1196,7 +1432,7 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
                     ))}
                   </div>
                 )}
-                {!owned && (
+                {(!owned || (isHut && hutCount < HUT_LIMIT)) && (
                   <button
                     type="button"
                     className="primary-btn"
@@ -1207,7 +1443,7 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
                     Купить
                   </button>
                 )}
-                {status === 1 && (
+                {!isHut && status === 1 && (
                   <div
                     className="island-game-building-drag-icon"
                     draggable
@@ -1227,6 +1463,11 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
                 {b.id === 'warehouse' && status === 2 && (
                   <button type="button" className="primary-btn" style={{ marginTop: 8 }} onClick={() => setWarehouseModalOpen(true)}>
                     Открыть склад
+                  </button>
+                )}
+                {b.id === 'workshop' && status === 2 && (
+                  <button type="button" className="primary-btn" style={{ marginTop: 8 }} onClick={() => setWorkshopModalOpen(true)}>
+                    Улучшить зоны
                   </button>
                 )}
               </div>
@@ -1251,15 +1492,17 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
           </div>
           <div className="island-game-mobile-panel-body">
             {BUILDINGS.map((b) => {
+              const isHut = b.id === 'hut';
+              const hutCount = typeof game.buildings?.hut === 'number' ? game.buildings.hut : 0;
               const status = game.buildings[b.id];
-              const owned = status === 1 || status === 2;
-              const placed = status === 2;
-              const canBuild = !owned && canAffordWithWarehouse(game.resources, game.warehouse, b.cost);
+              const owned = isHut ? hutCount > 0 : (status === 1 || status === 2);
+              const placed = isHut ? hutCount > 0 : status === 2;
+              const canBuild = isHut ? hutCount < HUT_LIMIT && canAffordWithWarehouse(game.resources, game.warehouse, b.cost) : !owned && canAffordWithWarehouse(game.resources, game.warehouse, b.cost);
               return (
                 <div key={b.id} className="island-game-building-card">
-                  <div><strong>{b.name}</strong> {placed ? '✓ на карте' : owned ? '(куплено)' : ''}</div>
+                  <div><strong>{b.name}</strong> {placed ? (isHut ? `✓ ${hutCount}/${HUT_LIMIT}` : '✓ на карте') : owned ? '(куплено)' : ''}</div>
                   <div className="text-muted" style={{ fontSize: '0.85rem' }}>{b.desc}</div>
-                  {!owned && (
+                  {(!owned || (isHut && hutCount < HUT_LIMIT)) && (
                     <div style={{ fontSize: '0.8rem', marginTop: 4 }}>
                       {Object.entries(b.cost).map(([k, v]) => (
                         <span key={k} style={{ marginRight: 8 }}>
@@ -1271,7 +1514,7 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
                       ))}
                     </div>
                   )}
-                  {!owned && (
+                  {(!owned || (isHut && hutCount < HUT_LIMIT)) && (
                     <button
                       type="button"
                       className="primary-btn"
@@ -1282,7 +1525,7 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
                       Купить
                     </button>
                   )}
-                  {status === 1 && (
+                  {!isHut && status === 1 && (
                     <div
                       className="island-game-building-drag-icon"
                       draggable
@@ -1302,6 +1545,11 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
                   {b.id === 'warehouse' && status === 2 && (
                     <button type="button" className="primary-btn" style={{ marginTop: 8 }} onClick={() => { setWarehouseModalOpen(true); setMobilePanel(null); }}>
                       Открыть склад
+                    </button>
+                  )}
+                  {b.id === 'workshop' && status === 2 && (
+                    <button type="button" className="primary-btn" style={{ marginTop: 8 }} onClick={() => { setWorkshopModalOpen(true); setMobilePanel(null); }}>
+                      Улучшить зоны
                     </button>
                   )}
                 </div>
@@ -1377,16 +1625,21 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
             <p className="text-muted">{eventModal.text}</p>
             <div className="island-game-choices">
               {eventModal.choices.map((c, i) => {
-                const canPick = canAffordWithWarehouse(game.resources, game.warehouse, c.cost) || canAffordIgnoringProtectedWithWarehouse(game.resources, game.warehouse, c.cost, game.protectedResourceType);
-                const hasBuilding = !c.requireBuilding || game.buildings[c.requireBuilding];
-                const disabled =
-                  (c.effect === 'fight' && c.requireBuilding && !hasBuilding) ||
-                  (!canPick && c.effect !== 'robbed' && c.effect !== 'skip' && c.effect !== 'safe');
+                const hasTower = game.buildings?.watchtower === 2;
+                const showRefuse = !c.requireNoBuilding || !game.buildings?.[c.requireNoBuilding];
+                const showFight = !c.requireBuilding || (game.buildings?.[c.requireBuilding] && game.buildings[c.requireBuilding] >= 1);
+                if (eventModal.id === 'pirates') {
+                  if (c.effect === 'robbed' && hasTower) return null;
+                  if (c.effect === 'fight' && !hasTower) return null;
+                }
+                const needPay = c.voluntaryCost && c.cost && Object.keys(c.cost).some((k) => (c.cost[k] || 0) > 0);
+                const canPick = !needPay || canAffordWithWarehouse(game.resources, game.warehouse, c.cost);
+                const disabled = needPay && !canPick;
                 return (
                   <button
                     key={i}
                     type="button"
-                    className={c.effect === 'robbed' || c.effect === 'fight' ? 'secondary-btn' : 'primary-btn'}
+                    className={c.effect === 'robbed' || c.effect === 'pirates_give_all' ? 'secondary-btn' : 'primary-btn'}
                     disabled={disabled}
                     onClick={() => pickEventChoice(eventModal.id, i)}
                   >
@@ -1395,6 +1648,21 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
                 );
               })}
             </div>
+          </div>
+        </div>
+      )}
+
+      {eventOutro && phase === 'event_outro' && (
+        <div className="island-game-modal-backdrop">
+          <div className="island-game-modal event-modal event-outro-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>💡 Чему мы научились</h3>
+            <p className="text-muted" style={{ marginBottom: 8 }}>{eventOutro.lesson || eventOutro.tip}</p>
+            {eventOutro.tip && eventOutro.tip !== (eventOutro.lesson || '') && (
+              <p className="text-muted" style={{ fontSize: '0.9rem' }}>{eventOutro.tip}</p>
+            )}
+            <button type="button" className="primary-btn" style={{ marginTop: 12 }} onClick={() => { setEventOutro(null); setPhase('assign'); }}>
+              Далее
+            </button>
           </div>
         </div>
       )}
@@ -1413,7 +1681,7 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
         <div className="island-game-modal-backdrop" onClick={() => setWarehouseModalOpen(false)}>
           <div className="island-game-modal island-game-warehouse-modal" onClick={(e) => e.stopPropagation()}>
             <h3>🏪 Склад</h3>
-            <p className="text-muted" style={{ fontSize: '0.85rem' }}>В руках макс. {HAND_LIMIT}, на складе макс. {WAREHOUSE_LIMIT} каждого вида. Выбери защищённый ресурс — он не будет теряться в событиях.</p>
+            <p className="text-muted" style={{ fontSize: '0.85rem' }}>В руках макс. {HAND_LIMIT}, на складе макс. {WAREHOUSE_LIMIT} каждого вида. Защищённый ресурс не теряется, когда ресурсы забирают без выбора (шторм, грабёж). При добровольной оплате (торговля, ремонт) списывается даже защищённый.</p>
             <div className="island-game-warehouse-protected">
               <span>Защищённый ресурс:</span>
               {RESOURCE_KEYS.map((key) => (
@@ -1452,6 +1720,32 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
               </tbody>
             </table>
             <button type="button" className="primary-btn" onClick={() => setWarehouseModalOpen(false)}>Закрыть</button>
+          </div>
+        </div>
+      )}
+
+      {workshopModalOpen && game?.buildings?.workshop === 2 && (
+        <div className="island-game-modal-backdrop" onClick={() => setWorkshopModalOpen(false)}>
+          <div className="island-game-modal island-game-warehouse-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>🔨 Улучшения мастерской</h3>
+            <p className="text-muted" style={{ fontSize: '0.85rem' }}>Улучши зону — добыча там будет +1 за уровень (макс. {ZONE_UPGRADE_MAX}). Стоимость: {ZONE_UPGRADE_COST} 🐚 за улучшение.</p>
+            <div className="island-game-workshop-upgrades">
+              {['food', 'wood', 'stone', 'market'].map((zoneId) => {
+                const level = game.zoneUpgrades?.[zoneId] || 0;
+                const canUp = level < ZONE_UPGRADE_MAX && canAffordWithWarehouse(game.resources, game.warehouse, { coins: ZONE_UPGRADE_COST });
+                const label = { food: '🍎 Сбор ягод', wood: '🪵 Лес', stone: '🪨 Скалы', market: '🐚 Рынок' }[zoneId];
+                return (
+                  <div key={zoneId} className="island-game-workshop-row">
+                    <span>{label}</span>
+                    <span>+{level} к добыче</span>
+                    <button type="button" className="primary-btn" style={{ marginLeft: 8 }} disabled={!canUp} onClick={() => upgradeZone(zoneId)}>
+                      Улучшить ({ZONE_UPGRADE_COST} 🐚)
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+            <button type="button" className="primary-btn" onClick={() => setWorkshopModalOpen(false)}>Закрыть</button>
           </div>
         </div>
       )}

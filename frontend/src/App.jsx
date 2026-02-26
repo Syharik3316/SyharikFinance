@@ -151,11 +151,18 @@ export default function App() {
     }
   }, [view, currentScenario]);
 
+  /* Обновление /me только при входе на карту, без зависимости от user — иначе цикл setUser → эффект → fetch → setUser */
+  const lastViewRef = React.useRef(view);
   useEffect(() => {
+    if (view !== Views.MAP) {
+      lastViewRef.current = view;
+      return;
+    }
+    if (!user) return;
+    if (lastViewRef.current === Views.MAP) return;
+    lastViewRef.current = Views.MAP;
     let alive = true;
-    async function refreshOnMap() {
-      if (view !== Views.MAP) return;
-      if (!user) return;
+    (async () => {
       try {
         const res = await authedApiFetch(`${API_BASE}/me`);
         if (!res.ok || !alive) return;
@@ -165,8 +172,7 @@ export default function App() {
       } catch {
         // игнорируем ошибку обновления профиля при входе на карту
       }
-    }
-    refreshOnMap();
+    })();
     return () => {
       alive = false;
     };

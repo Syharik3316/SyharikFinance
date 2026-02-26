@@ -2614,20 +2614,40 @@ a:hover {
   background: var(--color-gray-50);
   border-radius: 16px;
   padding: 16px;
-  border: 1px solid var(--color-gray-200);
+  border: 2px solid var(--color-gray-200);
+  border-top: 3px solid var(--color-green);
+  border-bottom: 3px solid var(--color-white);
   overflow: auto;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
+.island-game-settlers--messages-only {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
 .island-game-settlers--messages-only .island-game-event-log {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  overflow: hidden;
 }
-
 .island-game-settlers--messages-only .island-game-event-log-list {
   flex: 1;
   min-height: 120px;
+  width: 100%;
+  max-height: none;
+  overflow-y: auto;
+}
+.island-game-settlers--messages-only .island-game-event-log-entry {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .island-game-settlers-title,
@@ -2715,10 +2735,20 @@ a:hover {
   border-color: var(--color-green);
 }
 
-.island-game-zone-title { margin-bottom: 8px; font-weight: 600; }
+.island-game-zone-title {
+  margin-bottom: 8px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--color-gray-200);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  display: inline-block;
+}
 .island-game-zone[style*="background-image"] .island-game-zone-title {
-  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  text-shadow: none;
   color: var(--color-gray-900);
+  background: rgba(255, 255, 255, 0.95);
 }
 .island-game-zone[style*="background-image"] .island-game-zone-instruction {
   background: rgba(255, 255, 255, 0.92);
@@ -2737,6 +2767,7 @@ a:hover {
   text-overflow: ellipsis;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
 }
 .island-game-zone-settlers {
@@ -2785,6 +2816,11 @@ a:hover {
 }
 
 .island-game-placed-building { font-size: 1.5rem; opacity: 0.9; }
+
+/* На десктопе значки построек на карте крупнее, на телефонах оставляем как есть */
+@media (min-width: 769px) {
+  .island-game-placed-building { font-size: 2.75rem; }
+}
 .island-game-novice-hint {
   font-size: 0.85rem;
   color: var(--color-gray-700);
@@ -2986,11 +3022,36 @@ a:hover {
 .island-game-warehouse-modal { max-width: 560px; }
 .island-game-warehouse-protected { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 16px; }
 .island-game-warehouse-protected > span { margin-right: 8px; font-size: 0.9rem; }
-.island-game-warehouse-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 0.9rem; }
+.island-game-workshop-upgrades { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+.island-game-workshop-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--color-gray-200); }
+.island-game-workshop-row:last-child { border-bottom: none; }
+.island-game-event-outro-modal .text-muted { margin-bottom: 0; }
+/* Обводка таблиц: сверху зелёное, снизу белое (как инверсия фона) */
+.island-game-warehouse-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+  border: 2px solid var(--color-gray-200);
+  border-top: 3px solid var(--color-green);
+  border-bottom: 3px solid var(--color-white);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
 .island-game-warehouse-table th,
 .island-game-warehouse-table td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--color-gray-200); }
-.island-game-warehouse-table th { color: var(--color-gray-600); font-weight: 600; }
-.island-game-event-log { margin-top: 20px; padding-top: 12px; border-top: 1px solid var(--color-gray-200); }
+.island-game-warehouse-table th { color: var(--color-gray-600); font-weight: 600; background: var(--color-gray-50); }
+.island-game-event-log {
+  margin-top: 20px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-gray-200);
+}
+.island-game-settlers--messages-only .island-game-event-log {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
 .island-game-event-log-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 8px; }
 .island-game-event-log-list { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
 .island-game-event-log-entry {
@@ -2998,12 +3059,16 @@ a:hover {
   padding: 6px 8px;
   background: var(--color-gray-50);
   border-radius: 8px;
-  border: 1px solid var(--color-gray-200);
+  border-left: 1px solid var(--color-gray-200);
+  border-right: 1px solid var(--color-gray-200);
+  border-bottom: 1px solid var(--color-gray-200);
+  border-top: 2px solid var(--color-green);
   display: flex;
   flex-direction: column;
   gap: 2px;
   color: var(--color-gray-700);
 }
+.island-game-event-log-entry:last-child { border-bottom: 2px solid var(--color-white); }
 .island-game-event-log-day { color: var(--color-gray-600); font-weight: 600; }
 .island-game-event-log-msg { line-height: 1.35; }
 

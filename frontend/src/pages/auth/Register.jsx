@@ -50,7 +50,8 @@ export default function Register({ apiBase, apiFetch, onBack, onRegistered }) {
                   className="login-form__input"
                   placeholder="Логин"
                   value={login}
-                  onChange={(e) => setLogin(e.target.value)}
+                  onChange={(e) => setLogin(e.target.value.slice(0, 16))}
+                  maxLength={16}
                 />
               </label>
               <label className="login-form__label">
@@ -60,7 +61,8 @@ export default function Register({ apiBase, apiFetch, onBack, onRegistered }) {
                   className="login-form__input"
                   placeholder="Имя"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => setName(e.target.value.slice(0, 16))}
+                  maxLength={16}
                 />
               </label>
               <label className="login-form__label">

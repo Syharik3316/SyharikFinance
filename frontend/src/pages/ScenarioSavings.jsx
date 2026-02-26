@@ -7,7 +7,7 @@ const DAYS = [
   {
     day: 1,
     location: 'room',
-    backgroundUrl: '/backgrounds/room.webp',
+    backgroundUrl: '/backgrounds/сцена1-1.jpg',
     backgroundClassName: '',
     title: 'Мечта о велосипеде',
     text: 'Ты давно хочешь новый велосипед за 5000 руб. В копилке уже есть 1000. Родители говорят: будут давать по 200 руб. каждую неделю. Готов(а) начать путь к мечте?',
@@ -31,7 +31,7 @@ const DAYS = [
   {
     day: 2,
     location: 'school',
-    backgroundUrl: '/backgrounds/school.webp',
+    backgroundUrl: '/backgrounds/сцена2-1.jpg',
     backgroundClassName: '',
     title: 'Рекламная листовка',
     text: 'По дороге в школу тебе дают листовку: в магазине сладостей акция — набор конфет за 200 руб. вместо 300.',
@@ -55,7 +55,7 @@ const DAYS = [
   {
     day: 3,
     location: 'home',
-    backgroundUrl: '/backgrounds/home.webp',
+    backgroundUrl: '/backgrounds/сцена3-1.jpg',
     backgroundClassName: '',
     title: 'Карманные деньги',
     text: 'Родители дают тебе первые 200 руб. карманных денег за неделю.',
@@ -79,7 +79,7 @@ const DAYS = [
   {
     day: 4,
     location: 'street',
-    backgroundUrl: '/backgrounds/street.jpg',
+    backgroundUrl: '/backgrounds/сцена4-1.jpg',
     backgroundClassName: '',
     title: 'Поход в кино с друзьями',
     text: 'Друзья приглашают в кино. Билет стоит 300 руб. Фильм очень ждёшь.',
@@ -103,7 +103,7 @@ const DAYS = [
   {
     day: 5,
     location: 'home',
-    backgroundUrl: '/backgrounds/home.webp',
+    backgroundUrl: '/backgrounds/сцена5-1.jpg',
     backgroundClassName: '',
     title: 'Премия от бабушки',
     text: 'Бабушка приходит в гости и дарит тебе 300 руб. «просто так».',
@@ -134,7 +134,7 @@ const DAYS = [
   {
     day: 6,
     location: 'school',
-    backgroundUrl: '/backgrounds/school.webp',
+    backgroundUrl: '/backgrounds/сцена6-1.jpg',
     backgroundClassName: '',
     title: 'Карту можно потерять',
     text: 'Одноклассник предлагает купить у него красивую наклейку для дневника за 100 руб.',
@@ -158,7 +158,7 @@ const DAYS = [
   {
     day: 7,
     location: 'home',
-    backgroundUrl: '/backgrounds/home.webp',
+    backgroundUrl: '/backgrounds/сцена7-1.jpg',
     backgroundClassName: '',
     title: 'Вторая неделя карманных денег',
     text: 'Прошла неделя — родители снова дают 200 руб.',
@@ -182,7 +182,7 @@ const DAYS = [
   {
     day: 8,
     location: 'yard',
-    backgroundUrl: '/backgrounds/yard.jpg',
+    backgroundUrl: '/backgrounds/сцена8-1.jpg',
     backgroundClassName: '',
     title: 'Подработка у соседа',
     text: 'Сосед предлагает помочь разобрать коробки в гараже за 300 руб.',
@@ -213,7 +213,7 @@ const DAYS = [
   {
     day: 9,
     location: 'park',
-    backgroundUrl: '/backgrounds/park.jpg',
+    backgroundUrl: '/backgrounds/сцена9-1.jpg',
     backgroundClassName: '',
     title: 'Вечер с друзьями',
     text: 'Друзья зовут в кафе. Твой счёт будет примерно 200 руб.',
@@ -237,7 +237,7 @@ const DAYS = [
   {
     day: 10,
     location: 'home',
-    backgroundUrl: '/backgrounds/home.webp',
+    backgroundUrl: '/backgrounds/сцена10-1.jpg',
     backgroundClassName: '',
     title: 'Разбор старых вещей',
     text: 'Ты находишь несколько старых, но хороших игрушек. На школьной ярмарке их можно продать за 400 руб.',
@@ -261,7 +261,7 @@ const DAYS = [
   {
     day: 11,
     location: 'school',
-    backgroundUrl: '/backgrounds/school.webp',
+    backgroundUrl: '/backgrounds/сцена11-1.jpg',
     backgroundClassName: '',
     title: 'Школьная столовая',
     text: 'В школьной столовой сегодня продают особенно вкусные булочки за 100 руб. У тебя с собой есть деньги.',
@@ -285,7 +285,7 @@ const DAYS = [
   {
     day: 12,
     location: 'home',
-    backgroundUrl: '/backgrounds/home.webp',
+    backgroundUrl: '/backgrounds/сцена12-1.jpg',
     backgroundClassName: '',
     title: 'Помощь по дому',
     text: 'Родители предлагают: если ты уберёшь всю квартиру, дадут 250 руб. дополнительно.',
@@ -316,7 +316,7 @@ const DAYS = [
   {
     day: 13,
     location: 'street',
-    backgroundUrl: '/backgrounds/street.jpg',
+    backgroundUrl: '/backgrounds/сцена13-1.jpg',
     backgroundClassName: '',
     title: 'Скидка на игру',
     text: 'В магазине игр твоя любимая игра со скидкой и стоит 500 руб. вместо 900.',
@@ -340,7 +340,7 @@ const DAYS = [
   {
     day: 14,
     location: 'home',
-    backgroundUrl: '/backgrounds/home.webp',
+    backgroundUrl: '/backgrounds/сцена14-1.jpg',
     backgroundClassName: '',
     title: 'Третья неделя карманных денег',
     text: 'Очередные 200 руб. от родителей. Они спрашивают, как продвигается накопление.',
@@ -364,7 +364,7 @@ const DAYS = [
   {
     day: 15,
     location: 'yard',
-    backgroundUrl: '/backgrounds/yard.jpg',
+    backgroundUrl: '/backgrounds/сцена15-1.jpg',
     backgroundClassName: '',
     title: 'Помощь соседке',
     text: 'Соседка просит вынести тяжёлые пакеты и предлагает 200 руб. благодарности.',
@@ -395,7 +395,7 @@ const DAYS = [
   {
     day: 16,
     location: 'school',
-    backgroundUrl: '/backgrounds/school.webp',
+    backgroundUrl: '/backgrounds/сцена196-1.jpg',
     backgroundClassName: '',
     title: 'Благотворительная ярмарка',
     text: 'В школе ярмарка: можно пожертвовать 100 руб. на помощь приюту для животных.',
@@ -419,7 +419,7 @@ const DAYS = [
   {
     day: 17,
     location: 'home',
-    backgroundUrl: '/backgrounds/home.webp',
+    backgroundUrl: '/backgrounds/сцена17-1.jpg',
     backgroundClassName: '',
     title: 'Неожиданная находка',
     text: 'За шкафом ты находишь конверт с забытыми 150 руб.ами.',
@@ -443,7 +443,7 @@ const DAYS = [
   {
     day: 18,
     location: 'home',
-    backgroundUrl: '/backgrounds/home.webp',
+    backgroundUrl: '/backgrounds/сцена18-1.jpg',
     backgroundClassName: '',
     title: 'Четвёртая неделя карманных денег',
     text: 'Родители снова выдают 200 руб. Ты уже близко к цели.',
@@ -467,7 +467,7 @@ const DAYS = [
   {
     day: 19,
     location: 'park',
-    backgroundUrl: '/backgrounds/park.jpg',
+    backgroundUrl: '/backgrounds/сцена19-1.jpg',
     backgroundClassName: '',
     title: 'Прогулка по ярмарке',
     text: 'На городской ярмарке продают много мелочей: брелоки, значки, фигурки. Всё по 100 руб.',
@@ -498,7 +498,7 @@ const DAYS = [
   {
     day: 20,
     location: 'home',
-    backgroundUrl: '/backgrounds/home.webp',
+    backgroundUrl: '/backgrounds/сцена20-1.jpg',
     backgroundClassName: '',
     title: 'Помощь младшему брату',
     text: 'Младший брат просит помочь собрать конструктор. Родители обещают 150 руб. за терпение и помощь.',
@@ -522,7 +522,7 @@ const DAYS = [
   {
     day: 21,
     location: 'home',
-    backgroundUrl: '/backgrounds/home.webp',
+    backgroundUrl: '/backgrounds/сцена21-1.jpg',
     backgroundClassName: '',
     title: 'Пятая неделя карманных денег',
     text: 'Ты уже почти у цели, но впереди ещё несколько недель. Родители дают очередные 200 руб.',
@@ -546,7 +546,7 @@ const DAYS = [
   {
     day: 22,
     location: 'school',
-    backgroundUrl: '/backgrounds/school.webp',
+    backgroundUrl: '/backgrounds/сцена22-1.jpg',
     backgroundClassName: '',
     title: 'Конкурс рисунков',
     text: 'В школе объявлен конкурс рисунков. Приз — 300 руб. Участие бесплатное.',
@@ -570,7 +570,7 @@ const DAYS = [
   {
     day: 23,
     location: 'street',
-    backgroundUrl: '/backgrounds/street.jpg',
+    backgroundUrl: '/backgrounds/сцена23-1.jpg',
     backgroundClassName: '',
     title: 'Вечерний магазин',
     text: 'По пути домой ты заходишь в магазин и видишь новые наушники за 600 руб. Старые ещё работают.',
@@ -594,7 +594,7 @@ const DAYS = [
   {
     day: 24,
     location: 'home',
-    backgroundUrl: '/backgrounds/home.webp',
+    backgroundUrl: '/backgrounds/сцена24-1.jpg',
     backgroundClassName: '',
     title: 'Шестая неделя карманных денег',
     text: 'Очередные 200 руб. от родителей. Они удивляются, как много ты уже накопил(а).',
@@ -618,7 +618,7 @@ const DAYS = [
   {
     day: 25,
     location: 'yard',
-    backgroundUrl: '/backgrounds/yard.jpg',
+    backgroundUrl: '/backgrounds/сцена25-1.jpg',
     backgroundClassName: '',
     title: 'Продажа старого самоката',
     text: 'Ты решаешь продать старый самокат, которым почти не пользуешься. За него дают 700 руб.',
@@ -649,7 +649,7 @@ const DAYS = [
   {
     day: 26,
     location: 'park',
-    backgroundUrl: '/backgrounds/park.jpg',
+    backgroundUrl: '/backgrounds/сцена26-1.jpg',
     backgroundClassName: '',
     title: 'Совместная тренировка',
     text: 'Друг предлагает устроить пробежку в парке и потом зайти в кафе за 150 руб.',
@@ -673,7 +673,7 @@ const DAYS = [
   {
     day: 27,
     location: 'home',
-    backgroundUrl: '/backgrounds/home.webp',
+    backgroundUrl: '/backgrounds/сцена27-1.jpg',
     backgroundClassName: '',
     title: 'Седьмая неделя карманных денег',
     text: 'Ты получаешь новые 200 руб. и понимаешь, что уже почти достиг(ла) цели.',
@@ -697,7 +697,7 @@ const DAYS = [
   {
     day: 28,
     location: 'school',
-    backgroundUrl: '/backgrounds/school.webp',
+    backgroundUrl: '/backgrounds/сцена28-1.jpg',
     backgroundClassName: '',
     title: 'Мастер-класс по ремонту велосипедов',
     text: 'В местном клубе проводят бесплатный мастер-класс по уходу за велосипедами.',
@@ -721,7 +721,7 @@ const DAYS = [
   {
     day: 29,
     location: 'home',
-    backgroundUrl: '/backgrounds/home.webp',
+    backgroundUrl: '/backgrounds/сцена29-1.jpg',
     backgroundClassName: '',
     title: 'Финишная прямая',
     text: 'Ты пересчитываешь копилку и понимаешь, что до цели осталось совсем немного.',
@@ -745,7 +745,7 @@ const DAYS = [
   {
     day: 30,
     location: 'shop',
-    backgroundUrl: '/backgrounds/shop.jpg',
+    backgroundUrl: '/backgrounds/сцена30-1.jpg',
     backgroundClassName: '',
     title: 'День покупки',
     text: 'Наступил последний день. Ты идёшь в магазин велосипедов и считаешь рубли.',
@@ -891,6 +891,22 @@ export default function ScenarioSavings({
   const [savingsRandomMap, setSavingsRandomMap] = useState({});
   const typingTimer = useRef(null);
   const fullTextRef = useRef('');
+
+  const allBackgroundUrls = useMemo(
+    () => [
+      ...new Set([
+        ...DAYS.map((d) => d.backgroundUrl),
+        ...(SAVINGS_RANDOM_EVENTS || []).map((e) => e.backgroundUrl),
+      ].filter(Boolean)),
+    ],
+    []
+  );
+  useEffect(() => {
+    allBackgroundUrls.forEach((url) => {
+      const img = new Image();
+      img.src = url;
+    });
+  }, [allBackgroundUrls]);
 
   const currentEvent = (savingsRandomMap[dayIndex] ?? DAYS[dayIndex]) || DAYS[DAYS.length - 1];
   const currentDay = currentEvent.day;
