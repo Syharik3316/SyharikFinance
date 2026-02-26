@@ -75,15 +75,19 @@ async function awardAchievementIfNeeded(user, code) {
   await user.addAchievement(achievement);
 }
 
+const HAND_LIMIT_FULL = 60;
+const WAREHOUSE_LIMIT_FULL = 200;
+
 function isIsland100Percent(state) {
   if (!state || !state.buildings || !state.resources || !state.warehouse) return false;
   const buildings = state.buildings;
-  if (buildings.hut !== 2 || buildings.warehouse !== 2 || buildings.workshop !== 2 || buildings.watchtower !== 2) return false;
+  const huts = typeof buildings.hut === 'number' ? buildings.hut : (buildings.hut === 2 ? 1 : 0);
+  if (huts < 4 || buildings.warehouse !== 2 || buildings.workshop !== 2 || buildings.watchtower !== 2) return false;
   const res = state.resources;
   const wh = state.warehouse;
   const keys = ['food', 'wood', 'stone', 'coins'];
   for (const k of keys) {
-    if ((res[k] || 0) < 30 || (wh[k] || 0) < 100) return false;
+    if ((res[k] || 0) < HAND_LIMIT_FULL || (wh[k] || 0) < WAREHOUSE_LIMIT_FULL) return false;
   }
   return true;
 }
