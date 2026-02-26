@@ -208,6 +208,10 @@ router.post('/finish', authMiddleware, async (req, res) => {
       await awardAchievementIfNeeded(user, 'investment_champion');
     }
 
+    if (scenario.code === 'lemonade_business' && status === 'passed') {
+      await awardAchievementIfNeeded(user, 'lemonade_champion');
+    }
+
     // XP: +50 за каждое первое прохождение сценария
     if (status === 'passed' && firstPass) {
       user.experience = (user.experience || 0) + 50;

@@ -46,6 +46,17 @@ router.post('/register', async (req, res) => {
       });
     }
 
+    const trimmedName = String(name).trim();
+    if (!trimmedName) {
+      return res.status(400).json({ message: 'Имя обязательно' });
+    }
+    if (trimmedName.length > 10) {
+      return res.status(400).json({ message: 'Имя не более 10 символов' });
+    }
+    if (normalizedLogin.length > 10) {
+      return res.status(400).json({ message: 'Логин не более 10 символов' });
+    }
+
     if (!normalizedEmail.includes('@')) {
       return res.status(400).json({ message: 'Invalid email' });
     }
@@ -71,7 +82,7 @@ router.post('/register', async (req, res) => {
 
     const user = await User.create({
       login: normalizedLogin,
-      name: String(name).trim(),
+      name: trimmedName,
       email: normalizedEmail,
       passwordHash,
       isVerified: false,

@@ -133,17 +133,19 @@ async function seedInitialData() {
 
   // Scenario 4: Мой первый бизнес (лимонадный киоск)
   let businessScenario = await Scenario.findOne({ where: { code: 'lemonade_business' } });
+  const businessScenarioData = {
+    title: 'Мой первый бизнес',
+    description: '30 дней — запусти киоск с лимонадом в парке и заработай на смартфон (5000 монет). Аренда, конкуренты, погода и удачные дни — учись принимать решения.',
+    type: 'business',
+    baseBudget: 1500,
+    goal: 5000,
+    maxDays: 30,
+    difficulty: 'beginner',
+  };
   if (!businessScenario) {
-    businessScenario = await Scenario.create({
-      code: 'lemonade_business',
-      title: 'Мой первый бизнес',
-      description: 'Запусти киоск с лимонадом на 30 дней, заработай на смартфон (5000 монет). Аренда, конкуренты, погода и удачные дни — учись принимать решения.',
-      type: 'business',
-      baseBudget: 1500,
-      goal: 5000,
-      maxDays: 30,
-      difficulty: 'beginner',
-    });
+    businessScenario = await Scenario.create({ code: 'lemonade_business', ...businessScenarioData });
+  } else {
+    await businessScenario.update({ description: businessScenarioData.description, maxDays: 30 });
   }
 
   // Scenario 5: Инвестиционная гонка
@@ -187,6 +189,12 @@ async function seedInitialData() {
       title: 'Инвестиционный чемпион',
       description: 'Лучший итоговый баланс в сценарии «Инвестиционная гонка».',
       icon: '📈',
+    },
+    {
+      code: 'lemonade_champion',
+      title: 'Первый бизнес',
+      description: 'Достиг цели в сценарии «Мой первый бизнес»: заработал 5000 монет на смартфон.',
+      icon: '🍋',
     },
     {
       code: 'island_survivor',
