@@ -401,7 +401,7 @@ bot.command('scenarios', async (ctx) => {
       return ctx.reply('Не удалось загрузить список сценариев.');
     }
 
-    const baseUrl = 'https://admin107.fvds.ru';
+    const baseUrl = (process.env.WEB_APP_URL || 'https://syharik3316.online').replace(/\/$/, '');
     let msg = '🎮 Сценарии\n\n';
 
     for (const s of scenarios) {
