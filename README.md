@@ -36,9 +36,9 @@
 graph LR
     subgraph Frontend
         direction TB
-        F1[App.jsx\nглобальное состояние]
-        F2[pages/ компоненты]
-        F3[lib/api.js\nобёртка fetch + токен]
+        F1[App.jsx глобальное состояние]
+        F2[pages компоненты]
+        F3[lib/api.js обёртка fetch + токен]
         F4[styles/]
         F1 --> F2
         F2 --> F3
@@ -47,7 +47,7 @@ graph LR
 
     subgraph Backend
         direction TB
-        B1[server.js\nинициализация]
+        B1[server.js инициализация]
         B2[routes/]
         B3[models/]
         B4[middleware/auth.js]
@@ -75,15 +75,15 @@ graph TD
     end
 
     subgraph "Сервер разработки (Vite)"
-        B[Vite Dev Server\nпорт 5173]
+        B[Vite Dev Server порт 5173]
     end
 
     subgraph "Продуктивный сервер (Nginx)"
-        C[Nginx\nстатический контент + прокси]
+        C[Nginx статический контент + прокси]
     end
 
     subgraph "Backend-сервер (Node.js)"
-        D[Express приложение\nпорт 4000]
+        D[Express приложение порт 4000]
     end
 
     subgraph "База данных"
@@ -389,4 +389,5 @@ devhack/
 └── README.md
 
 ```
+
 
