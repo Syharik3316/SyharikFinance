@@ -50,11 +50,11 @@ router.post('/register', async (req, res) => {
     if (!trimmedName) {
       return res.status(400).json({ message: 'Имя обязательно' });
     }
-    if (trimmedName.length > 10) {
-      return res.status(400).json({ message: 'Имя не более 10 символов' });
+    if (trimmedName.length > 16) {
+      return res.status(400).json({ message: 'Имя не более 16 символов' });
     }
-    if (normalizedLogin.length > 10) {
-      return res.status(400).json({ message: 'Логин не более 10 символов' });
+    if (normalizedLogin.length > 16) {
+      return res.status(400).json({ message: 'Логин не более 16 символов' });
     }
 
     if (!normalizedEmail.includes('@')) {

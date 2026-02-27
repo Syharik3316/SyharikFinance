@@ -100,14 +100,14 @@ router.patch('/', authMiddleware, async (req, res) => {
 
     if (name != null) {
       const newName = String(name).trim();
-      if (newName.length > 10) return res.status(400).json({ message: 'Имя не более 10 символов' });
+      if (newName.length > 16) return res.status(400).json({ message: 'Имя не более 16 символов' });
       user.name = newName;
     }
 
     if (login != null) {
       const newLogin = normalizeLogin(login);
       if (!newLogin) return res.status(400).json({ message: 'Invalid login' });
-      if (newLogin.length > 10) return res.status(400).json({ message: 'Логин не более 10 символов' });
+      if (newLogin.length > 16) return res.status(400).json({ message: 'Логин не более 16 символов' });
       const existing = await User.findOne({
         where: {
           login: newLogin,

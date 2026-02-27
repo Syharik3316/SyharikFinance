@@ -1,3 +1,8 @@
+/**
+ * Telegram bot for DevHack — финансовая грамотность для детей.
+ * Syncs with web: link account, view progress, continue scenarios on web.
+ * Run: npm run bot (from backend folder). Requires .env: TELEGRAM_BOT_TOKEN, TELEGRAM_BOT_SECRET, API_BASE_URL.
+ */
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
@@ -400,8 +405,9 @@ bot.command('scenarios', async (ctx) => {
     if (!Array.isArray(scenarios)) {
       return ctx.reply('Не удалось загрузить список сценариев.');
     }
+    scenarios = scenarios.filter((s) => s.code !== 'friend_birthday');
 
-    const baseUrl = ('https://syharik3316.online').replace(/\/$/, '');
+    const baseUrl = (process.env.WEB_APP_URL || 'https://syharik3316.online').replace(/\/$/, '');
     let msg = '🎮 Сценарии\n\n';
 
     for (const s of scenarios) {
