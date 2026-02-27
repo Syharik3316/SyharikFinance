@@ -396,7 +396,7 @@ bot.command('scenarios', async (ctx) => {
     }
 
     const user = await meRes.json().catch(() => null);
-    const scenarios = await scenariosRes.json().catch(() => []);
+    let scenarios = await scenariosRes.json().catch(() => []);
     if (!Array.isArray(scenarios)) {
       return ctx.reply('Не удалось загрузить список сценариев.');
     }
