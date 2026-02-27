@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
 const dotenv = require('dotenv');
 const path = require('path');
 const fs = require('fs');
@@ -72,69 +71,6 @@ const app = express();
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors());
 app.use(express.json());
-
-// Запрос от Telegram-бота (по секрету) — не лимитируем
-const isBotRequest = (req) =>
-  !!process.env.TELEGRAM_BOT_SECRET && req.get('x-bot-secret') === process.env.TELEGRAM_BOT_SECRET;
-
-// Rate limit: общий лимит для всего API (защита от спама и DDoS). Бот не лимитируется.
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 300,
-  message: { message: 'Слишком много запросов. Подожди 15 минут.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-  skip: isBotRequest,
-});
-// Жёсткий лимит для auth (логин, регистрация, верификация, повтор кода)
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
-  message: { message: 'Слишком много попыток входа. Подожди 15 минут.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-// Защита от форсинга: runs (restart, start, save, finish). Бот не лимитируется.
-const runsLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 25,
-  message: { message: 'Слишком много действий со сценариями. Подожди 15 минут.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-  skip: isBotRequest,
-});
-// Бот-сценарии: step + choice. Бот не лимитируется (до 200 по сути не ограничено).
-const botScenarioLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 200,
-  message: { message: 'Слишком много запросов к сценарию. Подожди немного.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-  skip: isBotRequest,
-});
-// Остров сокровищ: сохранение/загрузка состояния
-const islandGameLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 35,
-  message: { message: 'Слишком много действий в игре. Подожди немного.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-// Progress (start/finish) — защита от накрутки
-const progressLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
-  message: { message: 'Слишком много запросов прогресса. Подожди 15 минут.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-app.use('/api', apiLimiter);
-app.use('/api/auth', authLimiter);
-app.use('/api/runs', runsLimiter);
-app.use('/api/bot-scenario', botScenarioLimiter);
-app.use('/api/island-game', islandGameLimiter);
-app.use('/api/progress', progressLimiter);
 
 // Ensure upload folders exist
 const avatarsDir = path.join(__dirname, '..', 'uploads', 'avatars');
