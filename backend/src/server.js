@@ -52,6 +52,24 @@ async function ensureTelegramColumns() {
   }
 }
 
+/** Добавить колонку gemsAwardedUpToDay в island_game_states, если её ещё нет. */
+async function ensureIslandGemsAwardedColumn() {
+  try {
+    const qi = sequelize.getQueryInterface();
+    const tableDesc = await qi.describeTable('island_game_states');
+    if (tableDesc.gemsAwardedUpToDay != null) return;
+    await qi.addColumn('island_game_states', 'gemsAwardedUpToDay', {
+      type: sequelize.Sequelize.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    });
+    console.log('Migration: added column island_game_states.gemsAwardedUpToDay');
+  } catch (err) {
+    if (err.name === 'SequelizeDatabaseError' && /does not exist/.test(err.message)) return;
+    throw err;
+  }
+}
+
 const usersRouter = require('./routes/users');
 const authRouter = require('./routes/auth');
 const meRouter = require('./routes/me');
@@ -102,6 +120,7 @@ async function start() {
     await sequelize.sync();
     await ensureIslandBestDaysColumn();
     await ensureTelegramColumns();
+    await ensureIslandGemsAwardedColumn();
     await seedInitialData();
 
     app.listen(PORT, () => {

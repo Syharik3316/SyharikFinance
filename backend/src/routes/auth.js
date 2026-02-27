@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const { Op } = require('sequelize');
 const { User } = require('../models');
 const { sendMail } = require('../utils/mailer');
+const { isAllowedEmailDomain } = require('../utils/allowedEmailDomains');
 
 const router = express.Router();
 
@@ -25,9 +26,14 @@ function generateVerificationCode() {
   return String(Math.floor(100000 + Math.random() * 900000)); // 6 digits
 }
 
-async function sendVerificationCode(user, code) {
+/** true, если в .env указан NODE_ENV=development (регистр и пробелы не важны) — тогда код показывается в UI. */
+function isDevMode() {
+  return String(process.env.NODE_ENV || '').trim().toLowerCase() === 'development';
+}
+
+async function sendVerificationCode(email, code) {
   await sendMail({
-    to: user.email,
+    to: email,
     subject: 'Код подтверждения аккаунта',
     text: `Ваш код подтверждения: ${code}\n\nЕсли это были не вы — просто проигнорируйте письмо.`,
   });
@@ -50,8 +56,8 @@ router.post('/register', async (req, res) => {
     if (!trimmedName) {
       return res.status(400).json({ message: 'Имя обязательно' });
     }
-    if (trimmedName.length > 16) {
-      return res.status(400).json({ message: 'Имя не более 16 символов' });
+    if (trimmedName.length > 12) {
+      return res.status(400).json({ message: 'Имя не более 12 символов' });
     }
     if (normalizedLogin.length > 16) {
       return res.status(400).json({ message: 'Логин не более 16 символов' });
@@ -59,6 +65,11 @@ router.post('/register', async (req, res) => {
 
     if (!normalizedEmail.includes('@')) {
       return res.status(400).json({ message: 'Invalid email' });
+    }
+    if (!isAllowedEmailDomain(normalizedEmail)) {
+      return res.status(400).json({
+        message: 'Регистрация возможна только с почты Gmail, Mail.ru, Yandex, Outlook и других распространённых сервисов. Укажите email на разрешённом домене.',
+      });
     }
 
     if (String(password).length < 6) {
@@ -80,6 +91,17 @@ router.post('/register', async (req, res) => {
     const verificationCodeHash = await bcrypt.hash(code, 10);
     const verificationCodeExpiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 min
 
+    // Сначала отправляем письмо — только потом создаём пользователя (если SMTP упадёт, пользователь не создастся)
+    try {
+      await sendVerificationCode(normalizedEmail, code);
+    } catch (mailErr) {
+      console.error('[AUTH] Failed to send verification email:', mailErr.message);
+      const status = mailErr.code === 'EAUTH' ? 503 : 502;
+      return res.status(status).json({
+        message: mailErr.message || 'Не удалось отправить письмо с кодом. Проверьте адрес почты или попробуйте позже.',
+      });
+    }
+
     const user = await User.create({
       login: normalizedLogin,
       name: trimmedName,
@@ -91,13 +113,11 @@ router.post('/register', async (req, res) => {
       characterKey: 'katya',
     });
 
-    await sendVerificationCode(user, code);
-
     res.status(201).json({
       message: 'Registered. Check your email for verification code.',
-      email: user.email,
+      email: normalizedEmail,
       // В прототипе удобно видеть код без SMTP:
-      devCode: process.env.NODE_ENV === 'development' ? code : undefined,
+      devCode: isDevMode() ? code : undefined,
     });
   } catch (err) {
     console.error(err);
@@ -201,7 +221,7 @@ router.post('/login', async (req, res) => {
     console.error('Login error:', err);
     res.status(500).json({
       message: err.message || 'Failed to login',
-      ...(process.env.NODE_ENV === 'development' && { detail: err.stack }),
+      ...(isDevMode() && { detail: err.stack }),
     });
   }
 });
@@ -228,11 +248,18 @@ router.post('/resend-code', async (req, res) => {
     user.verificationCodeExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
     await user.save();
 
-    await sendVerificationCode(user, code);
+    try {
+      await sendVerificationCode(user.email, code);
+    } catch (mailErr) {
+      console.error('[AUTH] Failed to resend verification email:', mailErr.message);
+      return res.status(502).json({
+        message: mailErr.message || 'Не удалось отправить письмо. Попробуйте позже.',
+      });
+    }
 
     res.json({
       message: 'Verification code resent',
-      devCode: process.env.NODE_ENV === 'development' ? code : undefined,
+      devCode: isDevMode() ? code : undefined,
     });
   } catch (err) {
     console.error(err);

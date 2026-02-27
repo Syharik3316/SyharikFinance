@@ -160,6 +160,7 @@ router.post('/start', authMiddleware, async (req, res) => {
         dayCount: 1,
         gameOver: null,
         state,
+        gemsAwardedUpToDay: 0,
       },
       { returning: true }
     );
@@ -177,14 +178,30 @@ router.post('/start', authMiddleware, async (req, res) => {
 });
 
 // POST /api/island-game — сохранить состояние (body: full state)
+// Алмазы за дни начисляются только здесь: не более +1 день за запрос, 1 алмаз за новый день.
 router.post('/', authMiddleware, async (req, res) => {
   try {
     const { difficulty, dayCount, gameOver, state } = req.body;
+    const requestedDay = Math.max(1, Math.floor(Number(dayCount)) || 1);
+
+    const existing = await IslandGameState.findOne({
+      where: { userId: req.user.id },
+    });
+
+    // Разрешаем только шаг дня +0 или +1 от текущего сохранения (защита от фарма)
+    const prevDay = existing ? existing.dayCount : 0;
+    const allowedDay = existing ? Math.min(requestedDay, prevDay + 1) : requestedDay;
+    if (existing && requestedDay > prevDay + 1) {
+      return res.status(400).json({
+        message: 'Day count can only advance by 0 or 1 per save. Play the game to earn gems.',
+      });
+    }
+
     const [row] = await IslandGameState.upsert(
       {
         userId: req.user.id,
         difficulty: difficulty || 'novice',
-        dayCount: dayCount ?? 1,
+        dayCount: allowedDay,
         gameOver: gameOver || null,
         state: state || null,
       },
@@ -192,9 +209,21 @@ router.post('/', authMiddleware, async (req, res) => {
     );
     const record = Array.isArray(row) ? row[0] : row;
 
+    // Начисление 1 алмаза за новый прожитый день (только на бэкенде, один раз за день)
+    const gemsAwardedUpToDay = Number(record.gemsAwardedUpToDay) || 0;
+    if (allowedDay > gemsAwardedUpToDay) {
+      const user = await User.findByPk(req.user.id);
+      if (user) {
+        user.gems = Math.max(0, Math.round((user.gems || 0) + 1));
+        await user.save();
+      }
+      record.gemsAwardedUpToDay = allowedDay;
+      await record.save();
+    }
+
     const meta = {};
-    if (gameOver && (dayCount || record.dayCount)) {
-      const days = dayCount ?? record.dayCount;
+    if (gameOver && (allowedDay || record.dayCount)) {
+      const days = allowedDay || record.dayCount;
       const user = await User.findByPk(req.user.id);
       if (user) {
         const prevBest = user.islandBestDays || 0;

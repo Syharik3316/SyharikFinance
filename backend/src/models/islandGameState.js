@@ -30,6 +30,12 @@ const IslandGameState = sequelize.define(
       allowNull: true,
       comment: 'null = playing, else reason: hunger, bankruptcy, pirates, etc.',
     },
+    gemsAwardedUpToDay: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+      comment: 'До какого дня уже начислены алмазы (1 алмаз за день); начисление только на бэкенде.',
+    },
     state: {
       type: DataTypes.JSON,
       allowNull: true,

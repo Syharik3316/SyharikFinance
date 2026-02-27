@@ -7,6 +7,7 @@ const { Op } = require('sequelize');
 const { User, Achievement, TelegramLinkToken } = require('../models');
 const { authMiddleware } = require('../middleware/auth');
 const { sendMail } = require('../utils/mailer');
+const { isAllowedEmailDomain } = require('../utils/allowedEmailDomains');
 
 const TELEGRAM_LINK_EXPIRES_MS = 10 * 60 * 1000; // 10 min
 
@@ -29,6 +30,10 @@ function normalizeLogin(login) {
 
 function generateVerificationCode() {
   return String(Math.floor(100000 + Math.random() * 900000)); // 6 digits
+}
+
+function isDevMode() {
+  return String(process.env.NODE_ENV || '').trim().toLowerCase() === 'development';
 }
 
 async function sendVerificationCode(user, code) {
@@ -100,7 +105,7 @@ router.patch('/', authMiddleware, async (req, res) => {
 
     if (name != null) {
       const newName = String(name).trim();
-      if (newName.length > 16) return res.status(400).json({ message: 'Имя не более 16 символов' });
+      if (newName.length > 12) return res.status(400).json({ message: 'Имя не более 12 символов' });
       user.name = newName;
     }
 
@@ -122,6 +127,11 @@ router.patch('/', authMiddleware, async (req, res) => {
     if (email != null) {
       const newEmail = normalizeEmail(email);
       if (!newEmail.includes('@')) return res.status(400).json({ message: 'Invalid email' });
+      if (!isAllowedEmailDomain(newEmail)) {
+        return res.status(400).json({
+          message: 'Допускается только почта Gmail, Mail.ru, Yandex, Outlook и других распространённых сервисов.',
+        });
+      }
       const existing = await User.findOne({
         where: {
           email: newEmail,
@@ -141,11 +151,18 @@ router.patch('/', authMiddleware, async (req, res) => {
       user.verificationCodeHash = await bcrypt.hash(code, 10);
       user.verificationCodeExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
       await user.save();
-      await sendVerificationCode(user, code);
+      try {
+        await sendVerificationCode(user, code);
+      } catch (mailErr) {
+        console.error('[ME] Failed to send verification email:', mailErr.message);
+        return res.status(502).json({
+          message: mailErr.message || 'Не удалось отправить письмо с кодом. Попробуйте позже.',
+        });
+      }
       return res.json({
         message: 'Profile updated. Email changed — verification code sent.',
         email: user.email,
-        devCode: process.env.NODE_ENV === 'development' ? code : undefined,
+        devCode: isDevMode() ? code : undefined,
       });
     }
 
@@ -241,23 +258,9 @@ router.post('/telegram-unlink', authMiddleware, async (req, res) => {
   }
 });
 
-// POST /api/me/gems — начислить алмазы (например, за дни в мини-игре «Остров»)
-router.post('/gems', authMiddleware, async (req, res) => {
-  try {
-    const amount = Math.max(0, Math.floor(Number(req.body?.amount) || 0));
-    if (amount <= 0) return res.status(400).json({ message: 'amount must be a positive number' });
-
-    const user = await User.findByPk(req.user.id);
-    if (!user) return res.status(404).json({ message: 'User not found' });
-
-    user.gems = Math.max(0, Math.round((user.gems || 0) + amount));
-    await user.save();
-
-    res.json({ gems: user.gems });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Failed to add gems' });
-  }
+// POST /api/me/gems удалён: начисление только на бэкенде (сценарии — /api/runs/finish, Остров — при сохранении /api/island-game).
+router.post('/gems', authMiddleware, (req, res) => {
+  res.status(410).json({ message: 'Earn gems by completing scenarios or playing the Island game. little cheater.' });
 });
 
 module.exports = router;
