@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>403 — Доступ запрещён | SyharikFinance</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --color-white: #ffffff;
+      --color-bg: #f8faf9;
+      --color-green-dark: #1a5f3a;
+      --color-green: #2d7a4a;
+      --color-green-light: #3d9b5c;
+      --color-gray-900: #1a1a1a;
+      --color-gray-600: #5a5a5a;
+      --radius-md: 12px;
+      --radius-lg: 20px;
+      --shadow-md: 0 4px 16px rgba(26, 95, 58, 0.12);
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100vh; }
+    body {
+      font-family: var(--font);
+      font-size: 16px;
+      line-height: 1.5;
+      color: var(--color-gray-900);
+      background: linear-gradient(0deg, var(--color-green-dark) 0%, var(--color-green) 18%, var(--color-green-light) 32%, var(--color-bg) 48%, var(--color-white) 62%, var(--color-white) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .error-card {
+      max-width: 420px;
+      width: 100%;
+      background: var(--color-white);
+      border: 2px solid var(--color-green);
+      border-radius: var(--radius-lg);
+      padding: 40px 32px;
+      text-align: center;
+      box-shadow: var(--shadow-md);
+    }
+    .error-card__logo {
+      display: block;
+      height: 48px;
+      width: auto;
+      max-width: 160px;
+      margin: 0 auto 24px;
+      object-fit: contain;
+    }
+    .error-card__logo-slot {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 24px;
+      border-radius: var(--radius-md);
+      background: var(--color-green);
+    }
+    .error-card__code {
+      font-size: 3.5rem;
+      font-weight: 700;
+      color: var(--color-green-dark);
+      margin: 0 0 12px;
+      line-height: 1.1;
+    }
+    .error-card__title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--color-gray-900);
+      margin: 0 0 8px;
+    }
+    .error-card__text {
+      font-size: 0.95rem;
+      color: var(--color-gray-600);
+      margin: 0 0 28px;
+      line-height: 1.5;
+    }
+    .error-card__btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 24px;
+      font-family: var(--font);
+      font-size: 1rem;
+      font-weight: 600;
+      background: var(--color-green);
+      color: var(--color-white);
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .error-card__btn:hover {
+      background: var(--color-green-light);
+      transform: translateY(-1px);
+    }
+  </style>
+</head>
+<body>
+  <div class="error-card">
+    <img src="/logo.png" alt="SyharikFinance" class="error-card__logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+    <div class="error-card__logo-slot" style="display:none;"></div>
+    <h1 class="error-card__code">403</h1>
+    <p class="error-card__title">Доступ запрещён</p>
+    <p class="error-card__text">У вас нет прав для просмотра этой страницы.</p>
+    <a href="/" class="error-card__btn">На главную</a>
+  </div>
+</body>
+</html>
