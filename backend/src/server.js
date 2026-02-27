@@ -1,6 +1,5 @@
 const express = require('express');
 const cors = require('cors');
-const helmet = require('helmet');
 const dotenv = require('dotenv');
 const path = require('path');
 const fs = require('fs');
@@ -68,7 +67,6 @@ const botScenarioRouter = require('./routes/botScenario');
 
 const app = express();
 
-app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors());
 app.use(express.json());
 

@@ -16,10 +16,6 @@ function getMinDayIndexToComplete(scenario) {
   return 0;
 }
 
-/** Последний restart по user+scenario для rate limit (мс). */
-const lastRestartAt = new Map();
-const RESTART_COOLDOWN_MS = 15000; // 15 сек между restart по одному сценарию
-
 async function getScenarioOr404(code, res) {
   const scenario = await Scenario.findOne({ where: { code } });
   if (!scenario) {
@@ -260,22 +256,12 @@ router.post('/finish', authMiddleware, async (req, res) => {
   }
 });
 
-// Optionally restart (delete active run). Rate limit: не чаще раза в RESTART_COOLDOWN_MS по одному сценарию.
+// Optionally restart (delete active run)
 router.post('/restart', authMiddleware, async (req, res) => {
   try {
     const { scenarioCode } = req.body;
     const scenario = await getScenarioOr404(scenarioCode, res);
     if (!scenario) return;
-
-    const key = `${req.user.id}:${scenario.id}`;
-    const now = Date.now();
-    const last = lastRestartAt.get(key);
-    if (last != null && now - last < RESTART_COOLDOWN_MS) {
-      return res.status(429).json({
-        message: `Перезапуск можно делать не чаще раза в ${RESTART_COOLDOWN_MS / 1000} сек. Подожди немного.`,
-      });
-    }
-    lastRestartAt.set(key, now);
 
     await ScenarioRun.destroy({
       where: {
