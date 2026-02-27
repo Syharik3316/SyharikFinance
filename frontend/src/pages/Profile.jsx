@@ -548,4 +548,3 @@ export default function Profile({
     </div>
   );
 }
-
