@@ -1,8 +1,3 @@
-/**
- * Telegram bot for DevHack — финансовая грамотность для детей.
- * Syncs with web: link account, view progress, continue scenarios on web.
- * Run: npm run bot (from backend folder). Requires .env: TELEGRAM_BOT_TOKEN, TELEGRAM_BOT_SECRET, API_BASE_URL.
- */
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
