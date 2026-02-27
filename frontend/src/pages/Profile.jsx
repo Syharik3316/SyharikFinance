@@ -278,18 +278,18 @@ export default function Profile({
             <>
               <section className="profile-section">
                 <h2 className="profile-section__title">Профиль</h2>
-                <p className="profile-section__subtitle">Здесь можно менять имя, логин и почту. Имя и логин — до 16 символов.</p>
+                <p className="profile-section__subtitle">Здесь можно менять имя, логин и почту. Имя — до 12 символов, логин — до 16.</p>
                 <div className="profile-form">
                   <div className="profile-form__row">
                     <label className="profile-form__label">
-                      Имя (до 16 символов)
+                      Имя (до 12 символов)
                       <input
                         type="text"
                         className="profile-form__input"
                         value={name}
-                        onChange={(e) => setName(e.target.value.slice(0, 16))}
-                        maxLength={16}
-                        placeholder="До 16 символов"
+onChange={(e) => setName(e.target.value.slice(0, 12))}
+                maxLength={12}
+                        placeholder="До 12 символов"
                       />
                     </label>
                     <label className="profile-form__label">
@@ -298,8 +298,8 @@ export default function Profile({
                         type="text"
                         className="profile-form__input"
                         value={login}
-                        onChange={(e) => setLogin(e.target.value.slice(0, 16))}
-                        maxLength={16}
+onChange={(e) => setLogin(e.target.value.slice(0, 16))}
+                maxLength={16}
                         placeholder="До 16 символов"
                       />
                     </label>

@@ -46,7 +46,7 @@ export default function Register({ apiBase, apiFetch, onBack, onRegistered }) {
             </p>
             <form className="login-form" onSubmit={submit}>
               <label className="login-form__label">
-                Логин
+                Логин (до 16 символов)
                 <input
                   type="text"
                   className="login-form__input"
@@ -57,14 +57,14 @@ export default function Register({ apiBase, apiFetch, onBack, onRegistered }) {
                 />
               </label>
               <label className="login-form__label">
-                Имя
+                Имя (до 12 символов)
                 <input
                   type="text"
                   className="login-form__input"
                   placeholder="Имя"
                   value={name}
-                  onChange={(e) => setName(e.target.value.slice(0, 16))}
-                  maxLength={16}
+                  onChange={(e) => setName(e.target.value.slice(0, 12))}
+                  maxLength={12}
                 />
               </label>
               <label className="login-form__label">

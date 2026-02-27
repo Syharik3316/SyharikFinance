@@ -246,17 +246,18 @@ a:hover {
   font-family: var(--font);
   font-size: 0.9rem;
   font-weight: 600;
-  color: var(--color-gray-600);
+  color: var(--color-green-dark);
   background: transparent;
-  border: 2px solid var(--color-gray-200);
+  border: 2px solid var(--color-green);
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: border-color 0.2s, color 0.2s;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
 }
 
 .header-nav-btn:hover {
-  border-color: var(--color-green);
+  border-color: var(--color-green-light);
   color: var(--color-green);
+  background: rgba(45, 122, 74, 0.06);
 }
 
 .header-gems {
@@ -994,6 +995,7 @@ a:hover {
   padding: 24px;
   box-shadow: var(--shadow-sm);
   min-width: 0;
+  overflow: hidden;
 }
 
 .leaderboard-card__title {
@@ -1015,6 +1017,7 @@ a:hover {
   gap: 12px;
   padding: 10px 0;
   border-bottom: 1px solid var(--color-gray-200);
+  min-width: 0;
 }
 
 .leaderboard-item:last-child {
@@ -1044,13 +1047,14 @@ a:hover {
 
 .leaderboard-item__name {
   flex: 1;
+  min-width: 0;
   font-weight: 600;
   font-size: 0.95rem;
   color: var(--color-gray-900);
-  min-width: 0;
-  overflow-wrap: break-word;
-  word-break: break-word;
   line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .leaderboard-item__gems {
@@ -1185,6 +1189,7 @@ a:hover {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.95rem;
+  table-layout: fixed;
 }
 
 .leaderboard-table__th {
@@ -1199,6 +1204,10 @@ a:hover {
 .leaderboard-table__th--rank {
   width: 72px;
   text-align: center;
+}
+
+.leaderboard-table__th--user {
+  min-width: 0;
 }
 
 .leaderboard-table__th--gems {
@@ -1220,6 +1229,7 @@ a:hover {
 
 .leaderboard-table__td--user {
   padding-left: 16px;
+  min-width: 0;
 }
 
 .leaderboard-table__td--gems {
@@ -1241,6 +1251,7 @@ a:hover {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
 }
 
 .leaderboard-table__avatar {
@@ -1265,6 +1276,8 @@ a:hover {
 }
 
 .leaderboard-table__name {
+  flex: 1;
+  min-width: 0;
   font-weight: 600;
   color: var(--color-gray-900);
   overflow: hidden;
@@ -2023,13 +2036,19 @@ a:hover {
 .pill-option {
   padding: 8px 14px;
   border-radius: 999px;
-  border: 2px solid var(--color-gray-200);
+  border: 2px solid var(--color-green);
   font-size: 0.9rem;
   cursor: pointer;
   background: var(--color-white);
-  color: var(--color-gray-600);
+  color: var(--color-green-dark);
   font-family: var(--font);
   font-weight: 500;
+}
+
+.pill-option:hover {
+  background: rgba(45, 122, 74, 0.08);
+  border-color: var(--color-green-light);
+  color: var(--color-green-dark);
 }
 
 .pill-option.selected {
@@ -2199,6 +2218,18 @@ a:hover {
 
 .scenario-stage .dialog-box .text-muted {
   color: rgba(255, 255, 255, 0.95);
+}
+
+/* Бонус (+100 / -50) и подсказка в выборе сценария — видны на кнопке (не белые на белом) */
+.scenario-stage .dialog-box .choice-btn .text-success,
+.scenario-stage .dialog-box .choice-btn .text-success.text-muted {
+  color: var(--color-green-dark) !important;
+}
+.scenario-stage .dialog-box .choice-btn .text-danger {
+  color: #b91c1c !important;
+}
+.scenario-stage .dialog-box .choice-btn + div.text-muted {
+  color: var(--color-gray-700) !important;
 }
 
 .scenario-stage .dialog-box .secondary-btn {

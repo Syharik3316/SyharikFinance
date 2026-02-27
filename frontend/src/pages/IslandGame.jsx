@@ -667,21 +667,20 @@ export default function IslandGame({ apiBase, apiFetch, user, difficulty, onBack
         reason: 'victory',
         message: 'Поздравляем! Ты полностью развил колонию: все постройки на карте, руки и склад заполнены по максимуму. Игра пройдена на 100%.',
       });
-      saveGame({ difficulty: g.difficulty, dayCount: g.dayCount, gameOver: 'victory', state: g }).then(() => deleteGameSave());
+      saveGame({ difficulty: g.difficulty, dayCount: g.dayCount, gameOver: 'victory', state: g }).then(() => {
+        if (onUserUpdated) onUserUpdated();
+        deleteGameSave();
+      });
     } else {
       setGame(g);
       setReport(g.lastReport);
       setPhase('report');
-      saveGame({ difficulty: g.difficulty, dayCount: g.dayCount, gameOver: null, state: g });
+      saveGame({ difficulty: g.difficulty, dayCount: g.dayCount, gameOver: null, state: g }).then(
+        () => { if (onUserUpdated) onUserUpdated(); }
+      );
     }
-    // 1 прожитый день = 1 алмаз (начисляются без уведомления)
-    apiFetch(`${apiBase}/me/gems`, {
-      method: 'POST',
-      body: JSON.stringify({ amount: 1 }),
-    }).then((res) => {
-      if (res.ok && onUserUpdated) onUserUpdated();
-    }).catch(() => {});
-  }, [apiBase, apiFetch, game, onUserUpdated, saveGame, deleteGameSave]);
+    // 1 алмаз за день начисляется на бэкенде при сохранении (POST /api/island-game)
+  }, [game, onUserUpdated, saveGame, deleteGameSave]);
 
   const closeReport = useCallback(() => {
     setReport(null);
