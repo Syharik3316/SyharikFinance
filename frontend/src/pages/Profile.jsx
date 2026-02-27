@@ -278,29 +278,29 @@ export default function Profile({
             <>
               <section className="profile-section">
                 <h2 className="profile-section__title">Профиль</h2>
-                <p className="profile-section__subtitle">Здесь можно менять имя, логин и почту. Имя и логин — до 10 символов.</p>
+                <p className="profile-section__subtitle">Здесь можно менять имя, логин и почту. Имя и логин — до 16 символов.</p>
                 <div className="profile-form">
                   <div className="profile-form__row">
                     <label className="profile-form__label">
-                      Имя (до 10 символов)
+                      Имя (до 16 символов)
                       <input
                         type="text"
                         className="profile-form__input"
                         value={name}
-                        onChange={(e) => setName(e.target.value.slice(0, 10))}
-                        maxLength={10}
-                        placeholder="До 10 символов"
+                        onChange={(e) => setName(e.target.value.slice(0, 16))}
+                        maxLength={16}
+                        placeholder="До 16 символов"
                       />
                     </label>
                     <label className="profile-form__label">
-                      Логин (до 10 символов)
+                      Логин (до 16 символов)
                       <input
                         type="text"
                         className="profile-form__input"
                         value={login}
-                        onChange={(e) => setLogin(e.target.value.slice(0, 10))}
-                        maxLength={10}
-                        placeholder="До 10 символов"
+                        onChange={(e) => setLogin(e.target.value.slice(0, 16))}
+                        maxLength={16}
+                        placeholder="До 16 символов"
                       />
                     </label>
                   </div>
@@ -548,3 +548,4 @@ export default function Profile({
     </div>
   );
 }
+
