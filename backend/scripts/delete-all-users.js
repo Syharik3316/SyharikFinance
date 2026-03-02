@@ -11,7 +11,7 @@
  */
 
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+require('dotenv').config({ path: path.join(__dirname, '..', '..', '.env') });
 
 const confirmed = process.argv.includes('--confirm');
 const userArg = process.argv.find((a) => a.startsWith('--user='));

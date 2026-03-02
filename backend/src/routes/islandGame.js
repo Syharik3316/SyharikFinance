@@ -193,7 +193,7 @@ router.post('/', authMiddleware, async (req, res) => {
     const allowedDay = existing ? Math.min(requestedDay, prevDay + 1) : requestedDay;
     if (existing && requestedDay > prevDay + 1) {
       return res.status(400).json({
-        message: 'Day count can only advance by 0 or 1 per save. Play the game to earn gems.',
+        message: 'Play the game to earn gems. little cheater.',
       });
     }
 

@@ -4,7 +4,23 @@ const dotenv = require('dotenv');
 const path = require('path');
 const fs = require('fs');
 
-dotenv.config();
+// Загрузка .env: корень проекта, backend, frontend (чтобы один .env в frontend/ подходил и для backend)
+const possibleEnvPaths = [
+  path.join(__dirname, '..', '..', '.env'),   // SyharikFinance/.env (корень репозитория)
+  path.join(__dirname, '..', '.env'),          // backend/.env или site_root/.env при плоском деплое
+  path.join(__dirname, '..', '..', 'frontend', '.env'), // frontend/.env
+];
+for (const envPath of possibleEnvPaths) {
+  if (fs.existsSync(envPath)) {
+    dotenv.config({ path: envPath });
+    break;
+  }
+}
+
+if (!process.env.DB_USER || !process.env.DB_NAME) {
+  console.error('Ошибка: в .env не заданы DB_USER и/или DB_NAME. Проверь путь к .env и переменные (DB_HOST, DB_USER, DB_PASSWORD, DB_NAME).');
+  process.exit(1);
+}
 
 // Ловим необработанные ошибки, чтобы процесс не падал молча и было видно причину
 process.on('uncaughtException', (err) => {

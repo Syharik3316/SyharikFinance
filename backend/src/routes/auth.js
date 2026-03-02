@@ -31,6 +31,26 @@ function isDevMode() {
   return String(process.env.NODE_ENV || '').trim().toLowerCase() === 'development';
 }
 
+const RECAPTCHA_SECRET = process.env.RECAPTCHA_SECRET_KEY || '';
+
+/** Проверка reCAPTCHA v2 токена через Google API. Возвращает true, если токен валиден. */
+async function verifyRecaptcha(token) {
+  if (!token || typeof token !== 'string') return false;
+  if (!RECAPTCHA_SECRET) return true; // если секрет не задан — проверку не требуем
+  try {
+    const res = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ secret: RECAPTCHA_SECRET, response: token }),
+    });
+    const data = await res.json();
+    return data.success === true;
+  } catch (err) {
+    console.error('[AUTH] reCAPTCHA verify error:', err.message);
+    return false;
+  }
+}
+
 async function sendVerificationCode(email, code) {
   await sendMail({
     to: email,
@@ -41,7 +61,21 @@ async function sendVerificationCode(email, code) {
 
 router.post('/register', async (req, res) => {
   try {
-    const { login, name, email, password } = req.body;
+    const { login, name, email, password, recaptchaToken } = req.body;
+
+    if (RECAPTCHA_SECRET) {
+      if (!recaptchaToken || typeof recaptchaToken !== 'string') {
+        return res.status(400).json({
+          message: 'Подтвердите, что вы не робот (reCAPTCHA).',
+        });
+      }
+      const recaptchaOk = await verifyRecaptcha(recaptchaToken);
+      if (!recaptchaOk) {
+        return res.status(400).json({
+          message: 'Проверка reCAPTCHA не пройдена. Попробуйте ещё раз.',
+        });
+      }
+    }
 
     const normalizedEmail = normalizeEmail(email);
     const normalizedLogin = normalizeLogin(login);

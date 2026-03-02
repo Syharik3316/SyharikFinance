@@ -4,7 +4,20 @@
  * Run: npm run bot (from backend folder). Requires .env: TELEGRAM_BOT_TOKEN, TELEGRAM_BOT_SECRET, API_BASE_URL.
  */
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+const fs = require('fs');
+
+// Загрузка .env: пробуем корень проекта, backend, frontend (как в server.js)
+const possibleEnvPaths = [
+  path.join(__dirname, '..', '..', '.env'),           // корень проекта (SyharikFinance/.env)
+  path.join(__dirname, '..', '.env'),                 // backend/.env
+  path.join(__dirname, '..', '..', 'frontend', '.env'), // frontend/.env
+];
+for (const envPath of possibleEnvPaths) {
+  if (fs.existsSync(envPath)) {
+    require('dotenv').config({ path: envPath });
+    break;
+  }
+}
 
 // Если API по HTTPS с самоподписным сертификатом — добавь в .env: ALLOW_SELF_SIGNED_SSL=true
 if (process.env.ALLOW_SELF_SIGNED_SSL === 'true' || process.env.ALLOW_SELF_SIGNED_SSL === '1') {
@@ -21,11 +34,11 @@ const BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || 'SyharikFinanceBot';
 const API_TIMEOUT_MS = 15000;
 
 if (!BOT_TOKEN) {
-  console.error('Set TELEGRAM_BOT_TOKEN in .env');
+  console.error('TELEGRAM_BOT_TOKEN не найден. Проверь, что .env лежит в корне проекта, в backend/ или в frontend/ и содержит строку TELEGRAM_BOT_TOKEN=...');
   process.exit(1);
 }
 if (!BOT_SECRET) {
-  console.error('Set TELEGRAM_BOT_SECRET in .env (same as backend)');
+  console.error('TELEGRAM_BOT_SECRET не найден в .env (должен совпадать с тем, что в backend).');
   process.exit(1);
 }
 
