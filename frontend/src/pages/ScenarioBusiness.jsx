@@ -706,26 +706,26 @@ export default function ScenarioBusiness({
                 <div className="choice-ghost">Выбор появится после того, как ты дочитаешь текст.</div>
               ) : (
                 <div className="choices-row">
-                  <div className="text-muted" style={{ marginBottom: 6 }}>Выбери действие:</div>
+                  <div className="dialog-choice-intro text-muted" style={{ marginBottom: 6 }}>Выбери действие:</div>
                   {currentEvent.choices.map((choice, idx) => (
                     <div key={idx}>
                       <button type="button" className="primary-btn choice-btn" onClick={() => handleChoice(choice)}>
                         <span>{choice.label}</span>
                         {(choice.delta !== 0 || choice.popularityDelta) && !isExpert && (
-                          <span style={{ fontSize: '0.8rem', marginLeft: 8 }}>
+                          <span style={{ fontSize: '0.9rem', marginLeft: 8, fontWeight: 700 }}>
                             {choice.delta !== 0 && (
-                              <span className={choice.delta > 0 ? 'text-success' : 'text-danger'}>
+                              <span className={`choice-delta ${choice.delta > 0 ? 'choice-delta--plus' : 'choice-delta--minus'}`}>
                                 {choice.delta > 0 ? '+' : ''}{choice.delta} 💰
                               </span>
                             )}
                             {choice.popularityDelta != null && choice.popularityDelta !== 0 && (
-                              <span className="text-muted"> {choice.popularityDelta > 0 ? '+' : ''}{choice.popularityDelta} ⭐</span>
+                              <span className="choice-delta choice-delta--plus"> {choice.popularityDelta > 0 ? '+' : ''}{choice.popularityDelta} ⭐</span>
                             )}
                           </span>
                         )}
                       </button>
                       {!isExpert && choice.hint && (
-                        <div className="text-muted" style={{ fontSize: '0.78rem', marginLeft: 6, marginTop: 2 }}>Подсказка: {choice.hint}</div>
+                        <div className="choice-hint" style={{ fontSize: '0.85rem', marginLeft: 6, marginTop: 4 }}>Подсказка: {choice.hint}</div>
                       )}
                     </div>
                   ))}

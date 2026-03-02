@@ -2216,20 +2216,36 @@ a:hover {
   to { opacity: 1; transform: translateY(0); }
 }
 
-.scenario-stage .dialog-box .text-muted {
-  color: rgba(255, 255, 255, 0.95);
+/* Только строка над кнопками («Теперь выбери действие…») — белая; не красим все .text-muted в диалоге */
+.scenario-stage .dialog-box .dialog-choice-intro,
+.scenario-ui .dialog-box .dialog-choice-intro,
+.scenario-stage .dialog-box .choices-row > .text-muted:first-child,
+.scenario-ui .dialog-box .choices-row > .text-muted:first-child {
+  color: #fffffff2;
 }
 
-/* Бонус (+100 / -50) и подсказка в выборе сценария — видны на кнопке (не белые на белом) */
-.scenario-stage .dialog-box .choice-btn .text-success,
-.scenario-stage .dialog-box .choice-btn .text-success.text-muted {
-  color: var(--color-green-dark) !important;
+/* Бонус (+100 / -50) в выборе сценария — зелёный и красный (и для .choice-delta, и для старой разметки .text-success.text-muted) */
+.scenario-stage .choice-btn .choice-delta--plus,
+.scenario-stage .choice-delta--plus,
+.scenario-ui .choice-btn .choice-delta--plus,
+.scenario-ui .choice-delta--plus,
+.scenario-stage .choices-row .choice-btn .text-success.text-muted,
+.scenario-ui .choices-row .choice-btn .text-success.text-muted {
+  color: #4caf70 !important;
+  font-weight: 700 !important;
 }
-.scenario-stage .dialog-box .choice-btn .text-danger {
-  color: #b91c1c !important;
+.scenario-stage .choice-btn .choice-delta--minus,
+.scenario-stage .choice-delta--minus,
+.scenario-ui .choice-btn .choice-delta--minus,
+.scenario-ui .choice-delta--minus,
+.scenario-stage .choices-row .choice-btn .text-danger,
+.scenario-ui .choices-row .choice-btn .text-danger {
+  color: #fecaca !important;
 }
-.scenario-stage .dialog-box .choice-btn + div.text-muted {
-  color: var(--color-gray-700) !important;
+.scenario-stage .choice-hint,
+.scenario-ui .choice-hint {
+  color: rgba(255, 255, 255, 0.95) !important;
+  font-weight: 500;
 }
 
 .scenario-stage .dialog-box .secondary-btn {

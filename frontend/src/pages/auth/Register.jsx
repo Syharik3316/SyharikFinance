@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+
+const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY || '';
 
 export default function Register({ apiBase, apiFetch, onBack, onRegistered }) {
   const [login, setLogin] = useState('');
@@ -8,16 +10,65 @@ export default function Register({ apiBase, apiFetch, onBack, onRegistered }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [devCode, setDevCode] = useState('');
+  const [recaptchaReady, setRecaptchaReady] = useState(false);
+  const recaptchaRef = useRef(null);
+  const recaptchaWidgetId = useRef(null);
+
+  useEffect(() => {
+    if (!RECAPTCHA_SITE_KEY) return;
+    if (typeof window.grecaptcha !== 'undefined') {
+      setRecaptchaReady(true);
+      return;
+    }
+    const onLoad = () => setRecaptchaReady(true);
+    window.onRecaptchaRegisterLoad = onLoad;
+    const script = document.createElement('script');
+    script.src = 'https://www.google.com/recaptcha/api.js?onload=onRecaptchaRegisterLoad&render=explicit';
+    script.async = true;
+    script.defer = true;
+    script.onerror = () => setRecaptchaReady(false);
+    document.head.appendChild(script);
+    return () => {
+      window.onRecaptchaRegisterLoad = null;
+      if (recaptchaWidgetId.current != null && window.grecaptcha) {
+        try {
+          window.grecaptcha.reset(recaptchaWidgetId.current);
+        } catch (_) {}
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!recaptchaReady || !RECAPTCHA_SITE_KEY || !recaptchaRef.current || !window.grecaptcha) return;
+    if (recaptchaWidgetId.current != null) return;
+    try {
+      recaptchaWidgetId.current = window.grecaptcha.render(recaptchaRef.current, {
+        sitekey: RECAPTCHA_SITE_KEY,
+        theme: 'light',
+        size: 'normal',
+      });
+    } catch (err) {
+      console.error('reCAPTCHA render error:', err);
+    }
+  }, [recaptchaReady]);
 
   const submit = async (e) => {
     e.preventDefault();
     setError('');
     setDevCode('');
+    let recaptchaToken = '';
+    if (RECAPTCHA_SITE_KEY && window.grecaptcha && recaptchaWidgetId.current != null) {
+      recaptchaToken = window.grecaptcha.getResponse(recaptchaWidgetId.current) || '';
+      if (!recaptchaToken) {
+        setError('Подтвердите, что вы не робот (reCAPTCHA).');
+        return;
+      }
+    }
     try {
       setLoading(true);
       const res = await apiFetch(`${apiBase}/auth/register`, {
         method: 'POST',
-        body: JSON.stringify({ login, name, email, password }),
+        body: JSON.stringify({ login, name, email, password, recaptchaToken: recaptchaToken || undefined }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -30,6 +81,11 @@ export default function Register({ apiBase, apiFetch, onBack, onRegistered }) {
       setError('Не удалось зарегистрироваться. Проверь backend.');
     } finally {
       setLoading(false);
+      if (RECAPTCHA_SITE_KEY && window.grecaptcha && recaptchaWidgetId.current != null) {
+        try {
+          window.grecaptcha.reset(recaptchaWidgetId.current);
+        } catch (_) {}
+      }
     }
   };
 
@@ -88,6 +144,15 @@ export default function Register({ apiBase, apiFetch, onBack, onRegistered }) {
                   autoComplete="new-password"
                 />
               </label>
+              <div className="login-form__label" style={{ minHeight: RECAPTCHA_SITE_KEY ? 78 : 'auto' }}>
+                {RECAPTCHA_SITE_KEY ? (
+                  <div ref={recaptchaRef} data-sitekey={RECAPTCHA_SITE_KEY} />
+                ) : (
+                  <p className="text-muted" style={{ fontSize: '0.85rem', margin: 0 }}>
+                    Защита reCAPTCHA не подключена. Добавь <code>VITE_RECAPTCHA_SITE_KEY</code> в .env в корне проекта и пересобери фронтенд (<code>npm run build</code>).
+                  </p>
+                )}
+              </div>
               <div className="login-form__row">
                 <button className="btn btn--primary btn--lg" type="submit" disabled={loading}>
                   {loading ? 'Создаём...' : 'Создать аккаунт'}

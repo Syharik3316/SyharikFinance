@@ -1175,7 +1175,7 @@ export default function ScenarioSavings({
                 <div className="choice-ghost">Выбор появится после того, как ты дочитаешь текст.</div>
               ) : (
                 <div className="choices-row">
-                  <div className="text-muted" style={{ marginBottom: 6 }}>
+                  <div className="dialog-choice-intro text-muted" style={{ marginBottom: 6 }}>
                     Теперь выбери действие на этот день:
                   </div>
                   {currentEvent.choices.map((choice, idx) => (
@@ -1188,8 +1188,8 @@ export default function ScenarioSavings({
                         <span>{choice.label}</span>
                         {!isExpert && choice.delta !== 0 && (
                           <span
-                            className={choice.delta > 0 ? 'text-success text-muted' : 'text-danger'}
-                            style={{ fontVariantNumeric: 'tabular-nums', fontSize: '0.8rem' }}
+                            className={`choice-delta ${choice.delta > 0 ? 'choice-delta--plus' : 'choice-delta--minus'}`}
+                            style={{ fontVariantNumeric: 'tabular-nums', fontSize: '0.9rem', fontWeight: 700 }}
                           >
                             {choice.delta > 0 ? '+' : ''}
                             {choice.delta}
@@ -1198,8 +1198,8 @@ export default function ScenarioSavings({
                       </button>
                       {!isExpert && showHints && choice.hint && (
                         <div
-                          className="text-muted"
-                          style={{ fontSize: '0.78rem', marginLeft: 6, marginTop: 2 }}
+                          className="choice-hint"
+                          style={{ fontSize: '0.85rem', marginLeft: 6, marginTop: 4 }}
                         >
                           Подсказка: {choice.hint}
                         </div>
